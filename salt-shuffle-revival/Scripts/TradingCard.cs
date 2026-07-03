@@ -75,6 +75,7 @@ namespace XRL.World.Parts {
 
 		public override bool HandleEvent(GetDebugInternalsEvent e) {
 			e.AddEntry(this, nameof(ParentObject), ParentObject.Blueprint);
+			e.AddEntry(this, nameof(Random), Random);
 			e.AddEntry(this, nameof(Faction), Faction ?? "undefined");
 			e.AddEntry(this, nameof(Blueprint), Blueprint ?? "undefined");
 			return base.HandleEvent(e);
