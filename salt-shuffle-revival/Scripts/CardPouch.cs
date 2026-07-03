@@ -33,6 +33,11 @@ namespace XRL.World.Parts {
 
 			ParentObject.CurrentCell.AddObject(pouch);
 			return base.HandleEvent(e);
-		}
-	}
+        }
+
+        // forces no stacking
+        public override bool SameAs(IPart p)
+            => false
+            ;
+    }
 }

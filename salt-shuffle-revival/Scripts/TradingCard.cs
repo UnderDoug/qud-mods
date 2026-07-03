@@ -13,6 +13,9 @@ namespace XRL.World.Parts {
 		public int PointValue = 0;
 		public string ShortDisplayName = "";
 		public bool Foil = false;
+		public bool Random;
+		public string Faction;
+		public string Blueprint;
 
 		public override void Read(GameObject basis, SerializationReader reader) {
 			if (reader.ModVersions["Plaidman_SaltShuffleRevival"] == new Version("1.0.0")) {
@@ -32,6 +35,7 @@ namespace XRL.World.Parts {
 			registrar.Register(ObjectCreatedEvent.ID);
 			registrar.Register(GetIntrinsicValueEvent.ID);
 			registrar.Register(The.Game, SSR_UninstallEvent.ID);
+			registrar.Register(GetDebugInternalsEvent.ID);
 			base.Register(go, registrar);
 		}
 
@@ -48,9 +52,38 @@ namespace XRL.World.Parts {
 		}
 
 		public override bool HandleEvent(ObjectCreatedEvent e) {
-			ParentObject.SetIntProperty("NeverStack", 1);
+            // if Random is set true in the object blueprint, find a random creature, set it
+			if (Random) {
+				SetCreature(FactionTracker.GetRandomCreature());
+            // if Blueprint is defined in the object blueprint, find the FE for it, set it; fall back to random creature
+            } else if (!Blueprint.IsNullOrEmpty()) {
+				if (FactionTracker.RequireEntity(Blueprint) is FactionEntity blueprintFE) {
+					SetCreature(blueprintFE);
+				} else {
+					SetCreature(FactionTracker.GetRandomCreature());
+				}
+			// if Faction is defined in the object blueprint, find a random FE for it, set it; fall back to random creature
+			} else if (!Faction.IsNullOrEmpty()) {
+				if (FactionTracker.GetRandomCreature(Faction) is FactionEntity factionFE) {
+					SetCreature(factionFE);
+				} else {
+					SetCreature(FactionTracker.GetRandomCreature());
+				}
+			}
 			return base.HandleEvent(e);
 		}
+
+		public override bool HandleEvent(GetDebugInternalsEvent e) {
+			e.AddEntry(this, nameof(ParentObject), ParentObject.Blueprint);
+			e.AddEntry(this, nameof(Faction), Faction ?? "undefined");
+			e.AddEntry(this, nameof(Blueprint), Blueprint ?? "undefined");
+			return base.HandleEvent(e);
+        }
+
+        // forces no stacking
+        public override bool SameAs(IPart p)
+            => false
+            ;
 
 		// opening a starter deck
 		public static GameObject CreateCard() {
@@ -116,6 +149,8 @@ namespace XRL.World.Parts {
 			}
 
 			PointValue = SunScore + MoonScore + StarScore;
+
+			Faction = fe.Factions.FirstOrDefault();
 
 			SetColors(fe);
 			SetDescription(fe);

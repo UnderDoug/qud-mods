@@ -39,11 +39,20 @@ namespace XRL.World.Parts {
 				Faction = null;
 				ParentObject.DisplayName = "Salt Shuffle starter deck";
 			} else {
-				OverrideFaction(FactionTracker.GetRandomFaction());
+                // this allows for object blueprints that inherit from Plaidman_SSR_Booster to specify a faction
+                if (Faction.IsNullOrEmpty())
+                    Faction = FactionTracker.GetRandomFaction();
+                else
+                    Faction = FactionTracker.ClosestFaction(Faction);
+                OverrideFaction(Faction);
 			}
-
 			return base.HandleEvent(e);
 		}
+
+        // forces no stacking
+        public override bool SameAs(IPart p)
+            => false
+            ;
 
 		public void OverrideFaction(string faction) {
 			Faction = faction;
