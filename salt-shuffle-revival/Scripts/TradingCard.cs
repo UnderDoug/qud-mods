@@ -57,7 +57,7 @@ namespace XRL.World.Parts {
 				SetCreature(FactionTracker.GetRandomCreature());
             // if Blueprint is defined in the object blueprint, find the FE for it, set it; fall back to random creature
             } else if (!Blueprint.IsNullOrEmpty()) {
-				if (FactionTracker.RequireEntity(Blueprint) is FactionEntity blueprintFE) {
+				if (FactionTracker.RequireCreature(Blueprint) is FactionEntity blueprintFE) {
 					SetCreature(blueprintFE);
 				} else {
 					SetCreature(FactionTracker.GetRandomCreature());

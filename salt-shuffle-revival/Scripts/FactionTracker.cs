@@ -160,29 +160,29 @@ namespace Plaidman.SaltShuffleRevival {
 			return GetFactionMembers(faction).GetRandomElementCosmetic().GetCreature();
 		}
 
-		public static FactionEntity RequireEntity(string blueprint) {
+		public static FactionEntity RequireCreature(string blueprint) {
 			if (GameObjectFactory.Factory.GetBlueprintIfExists(blueprint) is not GameObjectBlueprint model)
 				return null;
 
 			var instance = GetInstance();
+
 			// sample disposes itself at the end of scope
             using var sampleEntity = FactionEntity.GetCreature(model.Name);
 
             foreach (var feList in instance.FactionMemberCache.Values) {
 				if (feList.FirstOrDefault(fe => fe.Equals(sampleEntity)) is FactionEntity existingEntity) {
-                    return existingEntity;
+                    return existingEntity.GetCreature();
                 }
 			}
 
-			// not using, so entity will persist
-			var entity = sampleEntity.Clone();
-            foreach (var faction in entity.Factions) {
-				var factionMembers = GetFactionMembers(faction);
-				if (factionMembers.Any(member => member.Equals(sampleEntity))) continue;
-				factionMembers.Add(entity);
+            var entity = sampleEntity.Clone();
+            foreach (var faction in entity.Factions)
+            {
+                var factionMembers = GetFactionMembers(faction);
+                if (factionMembers.Any(member => member.Equals(entity))) continue;
+                factionMembers.Add(entity);
             }
-
-            return entity;
+            return entity.GetCreature();
 		}
 
 		public static List<string> GetCreatureFactions(GameObject go) {
