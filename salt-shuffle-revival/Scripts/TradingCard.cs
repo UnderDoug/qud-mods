@@ -1,13 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Plaidman.SaltShuffleRevival;
+using Qud.UI;
+using XRL.Collections;
 using XRL.Rules;
 
 namespace XRL.World.Parts {
 	[Serializable]
 	public class SSR_Card : IScribedPart, IModEventHandler<SSR_UninstallEvent> {
-		public int SunScore = 0;
+		public const double BASE_CARD_VALUE = 5.0; // whatever the Plaidman_SSR_Card blueprint's commerce value is set to
+		public const double TARGET_PLAYER_COMMERCE = 0.75; // the intended "base" value players should be able to sell cards for
+		public const double MERCHANT_COMMERCE_MULTI = 0.67; // modifies how much a merchant over/undervalues cards
+
+        public int SunScore = 0;
 		public int MoonScore = 0;
 		public int StarScore = 0;
 		public int PointValue = 0;
@@ -17,6 +24,9 @@ namespace XRL.World.Parts {
 		public string Faction;
 		public string Blueprint;
 
+		// allows storing arbitrary info without changing the class' members; great for modders to extend the mod
+		public Dictionary<string, string> Properties = new();
+
 		public override void Read(GameObject basis, SerializationReader reader) {
 			if (reader.ModVersions["Plaidman_SaltShuffleRevival"] == new Version("1.0.0")) {
 				SunScore = (int)reader.ReadObject();
@@ -25,25 +35,187 @@ namespace XRL.World.Parts {
 				PointValue = (int)reader.ReadObject();
 				ShortDisplayName = (string)reader.ReadObject();
 				Foil = false;
-				return;
+                return;
 			}
-
 			base.Read(basis, reader);
 		}
 
 		public override void Register(GameObject go, IEventRegistrar registrar) {
 			registrar.Register(ObjectCreatedEvent.ID);
 			registrar.Register(GetIntrinsicValueEvent.ID);
+			registrar.Register(AdjustValueEvent.ID);
 			registrar.Register(The.Game, SSR_UninstallEvent.ID);
 			registrar.Register(GetDebugInternalsEvent.ID);
-			base.Register(go, registrar);
+			registrar.Register("CanBeDisassembled");
+            base.Register(go, registrar);
 		}
 
-		public override bool HandleEvent(GetIntrinsicValueEvent e) {
-			e.Value = .75;
-			if (Foil) e.Value *= 4;
+		private double GetUnmodifiedCommerceValue()
+			=> ParentObject != null
+			&& ParentObject.GetBlueprint().TryGetPartParameter(nameof(Commerce), nameof(Commerce.Value), out double value)
+			&& value != 0
+            ? value
+			: BASE_CARD_VALUE
+            ;
 
-			return base.HandleEvent(e);
+		private double GetPlayerCommerceValueMultiplier()
+			=> TARGET_PLAYER_COMMERCE / GetUnmodifiedCommerceValue()
+			;
+
+		// gets the current trader, but only if the trade screen is open/visible
+		private static bool TryGetTrader(out GameObject Trader)
+			=> (Trader = TradeScreen.Trader) != null
+			&& TradeScreen.instance?.Visible is true
+			;
+
+		// gets the entity from whose perspective the value is being determined (basically, a trader, if one exists)
+        public static GameObject GetInterestedParty(GameObject Card) {
+            // if no one is holding the card or there is no one being traded with there's no one interested
+            // ensures that general value calculations remain intact
+            if (Card.Holder is not GameObject holder || !TryGetTrader(out var trader)) {
+				return null;
+			}
+
+			// if the holder (who exists) is not the player then the party evaluating the value is the holder (trader who is selling),
+			// otherwise the holder is the player so the party who is evaluating is the trader (who is buying)
+			return !holder.IsPlayer()
+				? holder
+				: trader
+				;
+        }
+
+        public static bool IsSelling(GameObject Trader, GameObject Object)
+			=> Trader == Object.Holder
+			;
+
+		public static void UnderValueMulti(ref double Value, double? Multi = null)
+			=> Value *= (Multi ?? MERCHANT_COMMERCE_MULTI)
+            ;
+
+		// turns 0.67 into 1.33 which is milder than the 1.49 that (value /= 0.67) results in;
+		// then multiplies by that; or simply multiplies by the provided number if it's bigger than 1.0
+		public static void OverValueMulti(ref double Value, double? Multi = null) {
+			double multi = Multi ?? MERCHANT_COMMERCE_MULTI;
+			if (multi < 1.0) multi = 1.0 + (1.0 - multi);
+			if (multi < 0) multi = -multi;
+			Value *= multi;
+        }
+
+		public int GetFeelingLevel(int Feeling)
+			=> Feeling switch {
+                >= 100 => 2,
+				>= 50 => 1,
+				> -50 => 0,
+				> -100 => -1,
+				_ => -2
+			};
+
+		// get's the trader's feeling about the factions on a card.
+		// takes all the trader's factions and crosses them with the factions on the card, aggregating the feelings toward each one
+		public int GetAggregateFeelingLevel(GameObject Trader) {
+			if (Trader == null
+				|| FactionTracker.GetCreatureFactions(Trader) is not List<string> traderFactions) {
+				return GetFeelingLevel(0);
+			}
+
+			using var factions = ScopeDisposedList<string>.GetFromPool();
+			if (TryGetProperty(nameof(FactionEntity.Factions), out string factionsString)
+				&& factionsString.CachedCommaExpansion() is IEnumerable<string> factionsEnumerable
+				&& !factionsEnumerable.IsNullOrEmpty()) {
+				factions.AddRange(factionsEnumerable);
+			} else if (!Faction.IsNullOrEmpty()) {
+				factions.Add(Faction);
+			}
+
+			if (factions.IsNullOrEmpty()) return GetFeelingLevel(0);
+
+			return traderFactions.Aggregate(
+				seed: 0,
+				func: delegate (int a, string n) {
+				return a + factions.Aggregate(
+					seed: a,
+					func: delegate (int a2, string n2) {
+						var traderFaction = Factions.GetIfExists(n);
+						return a2 + GetFeelingLevel(traderFaction.GetFeelingTowardsFaction(n2));
+					});
+				});
+        }
+
+		public static bool CardDepictsInterestedParty(GameObject Trader, GameObject Card)
+			=> Trader != null
+			&& Card != null
+			&& Trader.Blueprint == Card.GetPart<SSR_Card>().Blueprint
+			;
+
+		public static bool FactionsOverlap(IEnumerable<string> SourceFactions, IEnumerable<string> OtherFactions)
+			=> SourceFactions?.Any(f => OtherFactions?.Contains(f) is true) is true
+			;
+
+		public bool IsHeroic()
+			=> TryGetProperty(nameof(FactionTracker.IsHeroic), out string isHeroic)
+			&& isHeroic.EqualsNoCase("true")
+			;
+
+        public override bool HandleEvent(GetIntrinsicValueEvent e) {
+			if (e.Object == ParentObject) {
+				if (ParentObject.Holder?.IsPlayer() is true) {
+                // this reduces a card's value to 0.75 if it's being sold by the player,
+                // unless the commerce value has been modified by something else (such as extradimensional or gigantic),
+				// then it's proportionally reduced, ie extradimensional still doubles the value to 1.5 from 0.75
+                UnderValueMulti(ref e.Value, GetPlayerCommerceValueMultiplier());
+			}
+				// Non-Heroic cards are worth less? Easy to implement/unimplement
+				if (!IsHeroic()) {
+                    UnderValueMulti(ref e.Value, 0.67);
+			}
+                if (Foil) OverValueMulti(ref e.Value, 4.0);
+            }
+            return base.HandleEvent(e);
+		}
+
+        public override bool HandleEvent(AdjustValueEvent e) {
+			if (e.Object == ParentObject) {
+				if (GetInterestedParty(ParentObject) is GameObject interestedParty) {
+					if (!Faction.IsNullOrEmpty() && FactionTracker.GetCreatureFactions(interestedParty).Contains(Faction)) {
+						if (interestedParty.Blueprint != Blueprint || IsSelling(interestedParty, ParentObject.Holder)) {
+                            // makes traders undervalue cards of their own faction (they have/see a lot of them)
+                    using var factions = ScopeDisposedList<string>.GetFromPool();
+					if (TryGetProperty(nameof(FactionEntity.Factions), out string factionsString)
+						&& factionsString.CachedCommaExpansion() is IEnumerable<string> factionsEnumerable
+						&& !factionsEnumerable.IsNullOrEmpty()) {
+                        factions.AddRange(factionsEnumerable);
+					} else if (!Faction.IsNullOrEmpty()) { 
+						factions.Add(Faction);
+					}
+					bool factionOverlap = FactionsOverlap(factions, FactionTracker.GetCreatureFactions(interestedParty));
+                    if (factionOverlap) {
+						if (!CardDepictsInterestedParty(interestedParty, ParentObject)) {
+                            // makes traders undervalue cards of any of their own factions (they have/see a lot of them)
+                            // unless it's a card of themselves
+                            UnderValueMulti(ref e.Value); 
+						} else {
+                            // makes traders highly overvalue cards of themselves (out of vanity)
+                            OverValueMulti(ref e.Value, 7.0); // 7.5 results in a max-ego player being able to repeatedly trade back and forth for profit.
+						}
+                    }
+					int traderFeeling = GetAggregateFeelingLevel(interestedParty);
+					if (!IsSelling(interestedParty, ParentObject)) {
+                        // trader wont pay for cards from factions (or combinations thereof) they hate
+                        if (traderFeeling < -1) {
+                            UnderValueMulti(ref e.Value, 0.0);
+				}
+                        // trader will overpay for cards from factions (or combinations thereof) they "love" except for their own faction(s),
+						// on the basis of how much they love the combination of factions
+                        if (traderFeeling > 1
+                            && !CardDepictsInterestedParty(interestedParty, ParentObject)
+							&& !factionOverlap) {
+							double loveMulti = Math.Min(3.0, 1.0 + Math.Floor(traderFeeling * 0.5));
+                            OverValueMulti(ref e.Value, loveMulti);
+            }
+                    }
+                }
+            }
+            return base.HandleEvent(e);
 		}
 
 		public bool HandleEvent(SSR_UninstallEvent e) {
@@ -52,33 +224,51 @@ namespace XRL.World.Parts {
 		}
 
 		public override bool HandleEvent(ObjectCreatedEvent e) {
-            // if Random is set true in the object blueprint, find a random creature, set it
 			if (Random) {
-				SetCreature(FactionTracker.GetRandomCreature());
-            // if Blueprint is defined in the object blueprint, find the FE for it, set it; fall back to random creature
+                // if Random is set true in the object blueprint, find a random creature, set it
+                SetCreature(FactionTracker.GetRandomCreature());
             } else if (!Blueprint.IsNullOrEmpty()) {
-				if (FactionTracker.RequireCreature(Blueprint) is FactionEntity blueprintFE) {
+                // if Blueprint is defined in the object blueprint, find the FE for it, set it; fall back to random creature
+                if (FactionTracker.RequireCreature(Blueprint) is FactionEntity blueprintFE) {
 					SetCreature(blueprintFE);
 				} else {
 					SetCreature(FactionTracker.GetRandomCreature());
 				}
-			// if Faction is defined in the object blueprint, find a random FE for it, set it; fall back to random creature
 			} else if (!Faction.IsNullOrEmpty()) {
-				if (FactionTracker.GetRandomCreature(Faction) is FactionEntity factionFE) {
+                // if Faction is defined in the object blueprint, find a random FE for it, set it; fall back to random creature
+                if (FactionTracker.GetRandomCreature(Faction) is FactionEntity factionFE) {
 					SetCreature(factionFE);
 				} else {
 					SetCreature(FactionTracker.GetRandomCreature());
 				}
 			}
+			// if none of these are the case, then simply exist until SetCreature is called elsewhere
 			return base.HandleEvent(e);
 		}
 
 		public override bool HandleEvent(GetDebugInternalsEvent e) {
 			e.AddEntry(this, nameof(ParentObject), ParentObject.Blueprint);
+			e.AddEntry(this, nameof(Foil), Foil);
 			e.AddEntry(this, nameof(Random), Random);
 			e.AddEntry(this, nameof(Faction), Faction ?? "undefined");
 			e.AddEntry(this, nameof(Blueprint), Blueprint ?? "undefined");
+			using (var propertyPairs = ScopeDisposedList<string>.GetFromPool()) {
+				foreach ((var name, var value) in Properties) {
+					if (name.StartsWith("LastTrader")) continue;
+					propertyPairs.Add($"{name}: {value}");
+				}
+				e.AddEntry(this, nameof(Properties), propertyPairs.Aggregate((string)null, (a, n) => a + (!a.IsNullOrEmpty() ? "\n" : null) + n) ?? "empty");
+			}
 			return base.HandleEvent(e);
+		}
+
+		// stops gigantic and extradimensional mods (or any others) from making trading cards disassemblable
+        public override bool FireEvent(Event E)
+        {
+			if (E.ID == "CanBeDisassembled")
+				return false;
+
+            return base.FireEvent(E);
         }
 
         // forces no stacking
@@ -86,8 +276,8 @@ namespace XRL.World.Parts {
             => false
             ;
 
-		// opening a starter deck
-		public static GameObject CreateCard() {
+        // opening a starter deck
+        public static GameObject CreateCard() {
 			var card = GameObjectFactory.Factory.CreateObject("Plaidman_SSR_Card");
 			var part = card.GetPart<SSR_Card>();
 			part.SetCreature(FactionTracker.GetRandomCreature());
@@ -106,24 +296,24 @@ namespace XRL.World.Parts {
 		public static GameObject CreateCard(GameObject go) {
 			var card = GameObjectFactory.Factory.CreateObject("Plaidman_SSR_Card");
 			var part = card.GetPart<SSR_Card>();
-			part.SetCreature(new FactionEntity(go, false));
+            part.SetCreature(new FactionEntity(go, false));
 			return card;
 		}
 
 		private void SetCreature(FactionEntity fe) {
 			fe ??= FactionTracker.GetRandomCreature();
 
-			float sunScore = 2;
+            float sunScore = 2;
 			float moonScore = 2;
 			float starScore = 2;
 
 			int xpLevel = Math.Max(5, fe.Level);
 			sunScore += fe.Strength;
-			starScore += fe.Ego;
-			sunScore += fe.Toughness;
-			starScore += fe.Willpower;
-			moonScore += fe.Intelligence;
 			moonScore += fe.Agility;
+			sunScore += fe.Toughness;
+			moonScore += fe.Intelligence;
+			starScore += fe.Willpower;
+			starScore += fe.Ego;
 			float minScore = new float[]{ sunScore, moonScore, starScore }.Min();
 
 			sunScore -= minScore * 2 / 3;
@@ -151,13 +341,17 @@ namespace XRL.World.Parts {
 
 			PointValue = SunScore + MoonScore + StarScore;
 
-			Faction = fe.Factions.FirstOrDefault();
+			Faction = fe.Factions.FirstOrDefault(s => !s.IsNullOrEmpty());
+			Blueprint = fe.GetProperty(nameof(GameObject.Blueprint));
 
 			SetColors(fe);
 			SetDescription(fe);
 			SetDisplayName(fe);
             
-            if (fe.IsLovely)
+			Properties = new(fe.Properties);
+
+            if (fe.TryGetProperty(nameof(Lovely), out string isLovely)
+				&& isLovely.EqualsNoCase("true"))
                 ParentObject.RequirePart<Lovely>();
             else
                 ParentObject.RemovePart<Lovely>();
@@ -274,5 +468,20 @@ namespace XRL.World.Parts {
 				.Execute();
 			ParentObject.DisplayName = builder.ToString();
 		}
+
+        public bool HasProperty(string Name)
+            => !Name.IsNullOrEmpty()
+            && Properties.ContainsKey(Name)
+            ;
+
+        public string GetProperty(string Name, string Default = null)
+            => Name.IsNullOrEmpty() || !Properties.TryGetValue(Name, out string value)
+            ? Default
+            : value
+            ;
+
+        public bool TryGetProperty(string Name, out string Value)
+            => (Value = GetProperty(Name)) != null
+            ;
 	}
 }

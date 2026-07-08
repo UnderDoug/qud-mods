@@ -20,15 +20,43 @@ namespace XRL.World.Parts {
 		}
 
 		public override void Register(GameObject go, IEventRegistrar registrar) {
+			registrar.Register(GetIntrinsicValueEvent.ID);
+			registrar.Register(AdjustValueEvent.ID);
 			registrar.Register(GetInventoryActionsEvent.ID);
 			registrar.Register(InventoryActionEvent.ID);
 			registrar.Register(ObjectCreatedEvent.ID);
 			registrar.Register(The.Game, SSR_UninstallEvent.ID);
 
 			base.Register(go, registrar);
+        }
+
+        public override bool HandleEvent(GetIntrinsicValueEvent e) {
+            if (e.Object == ParentObject) {
+				if (e.Object.Holder?.IsPlayer() is true) {
+					if (Starter) {
+						// starters should be functionally valueless for players trying to sell
+						SSR_Card.UnderValueMulti(ref e.Value, 0.001);
+					} else {
+						// boosters are more akin to regular loot, but still relatively valueless to sell
+						SSR_Card.UnderValueMulti(ref e.Value, 0.01);
+					}
+				}
+            }
+            return base.HandleEvent(e);
+        }
+
+		public override bool HandleEvent(AdjustValueEvent e) {
+			if (e.Object == ParentObject && !Starter) {
+				if (SSR_Card.GetInterestedParty(ParentObject) is GameObject interestedParty) {
+					if (!Faction.IsNullOrEmpty() && FactionTracker.GetCreatureFactions(interestedParty).Contains(Faction)) {
+                        SSR_Card.UnderValueMulti(ref e.Value);
+                    }
+				}
+            }
+            return base.HandleEvent(e);
 		}
 
-		public bool HandleEvent(SSR_UninstallEvent e) {
+        public bool HandleEvent(SSR_UninstallEvent e) {
 			ParentObject.Count = 1;
 			ParentObject.Obliterate("uninstall", true);
 			return base.HandleEvent(e);
@@ -37,26 +65,42 @@ namespace XRL.World.Parts {
 		public override bool HandleEvent(ObjectCreatedEvent e) {
 			if (Starter) {
 				Faction = null;
-				ParentObject.DisplayName = "Salt Shuffle starter deck";
 			} else {
                 // this allows for object blueprints that inherit from Plaidman_SSR_Booster to specify a faction
-                if (Faction.IsNullOrEmpty())
-                    Faction = FactionTracker.GetRandomFaction();
-                else
-                    Faction = FactionTracker.ClosestFaction(Faction);
+                if (Faction.IsNullOrEmpty()) {
+					Faction = FactionTracker.GetRandomFaction();
+				} else {
+					Faction = FactionTracker.ClosestFaction(Faction);
+				}
                 OverrideFaction(Faction);
-			}
+            }
 			return base.HandleEvent(e);
-		}
+        }
 
         // forces no stacking
         public override bool SameAs(IPart p)
             => false
             ;
 
-		public void OverrideFaction(string faction) {
+        public void OverrideFaction(string faction) {
 			Faction = faction;
-			ParentObject.DisplayName = "pack of Salt Shuffle cards: " + Factions.Get(faction).DisplayName;
+			var entry = Factions.Get(faction);
+            ParentObject.DisplayName = $"pack of Salt Shuffle cards: {entry.DisplayName}";
+			if (entry.Emblem is FactionEmblem emblem) {
+				string existingColor = ParentObject.Render.TileColor.Replace("&", "");
+				if (existingColor.IsNullOrEmpty()) {
+					existingColor = ParentObject.Render.ColorString.Replace("&", "");
+                }
+
+                string detailColor = emblem.DetailColor.ToString();
+                if (detailColor == existingColor) {
+					detailColor = emblem.ColorString.Replace("&", "");
+				}
+
+				if (!detailColor.IsNullOrEmpty()) {
+					ParentObject.Render.DetailColor = detailColor;
+				}
+            }
 		}
 
 		public override bool HandleEvent(GetInventoryActionsEvent e) {

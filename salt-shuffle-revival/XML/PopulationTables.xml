@@ -1,56 +1,134 @@
 <populations>
 	<population Name="StartingGear_Common" Load="Merge">
 		<group Name="Items" Style="pickeach">
-			<object Blueprint="Plaidman_SSR_Starter" Number="1"></object>
+			<object Blueprint="Plaidman_SSR_Starter" Number="1" />
+		</group>
+	</population>
+
+  <!-- 
+		Adds a smallish chance to get a starter pack in a relevant table pull, they're expensive now, for balance.
+    Small chance to get a bigger set of random "loose" cards.
+    moderate chance to explode and pull from the table twice instead.
+  -->
+	<population Name="Plaidman_SSR Booster Or Cards">
+    <group Name="Items" Style="pickone">
+      <object Weight="15" Number="1" Blueprint="Plaidman_SSR_Booster" />
+      <object Weight="15" Number="2-5" Blueprint="Plaidman_SSR_Card Random" />
+      <object Weight="5" Number="4-9" Blueprint="Plaidman_SSR_Card Random" />
+      <object Weight="5" Number="1" Blueprint="Plaidman_SSR_Starter" />
+      <table Weight="10" Number="2" Name="Plaidman_SSR Booster Or Cards" />
+    </group>
+	</population>
+
+  <!-- 
+		This format, while having a chance itself to explode, allows for the table to be placed closer to the root table without impacting the vanilla result.
+    It picks both the card table and the parent table, meaning you get the card table pull and another pull from the same table.
+    Whatever result it would have replaced by being picked includes another pull from that table, effectively adding the card table instead of substituting
+  -->
+	<population Name="Plaidman_SSR Trading Cards Junk 0">
+		<group Name="Items" Style="pickeach">
+			<table Number="0-1" Name="Plaidman_SSR Booster Or Cards" />
+			<table Number="1" Name="Junk 0R" />
+		</group>
+	</population>
+	<population Name="Plaidman_SSR Trading Cards Junk 1">
+		<group Name="Items" Style="pickeach">
+			<table Number="0-1" Name="Plaidman_SSR Booster Or Cards" />
+			<table Number="1" Name="Junk 1R" />
+		</group>
+	</population>
+	<population Name="Plaidman_SSR Trading Cards Junk 2">
+		<group Name="Items" Style="pickeach">
+			<table Number="1" Name="Plaidman_SSR Booster Or Cards" />
+			<table Number="1" Name="Junk 2C" />
+		</group>
+	</population>
+	<population Name="Plaidman_SSR Trading Cards Junk 3">
+		<group Name="Items" Style="pickeach">
+			<table Number="1" Name="Plaidman_SSR Booster Or Cards" />
+			<table Number="1" Name="Junk 3R" />
+		</group>
+	</population>
+	<population Name="Plaidman_SSR Trading Cards Junk 4">
+		<group Name="Items" Style="pickeach">
+			<table Number="1" Name="Plaidman_SSR Booster Or Cards" />
+			<table Number="1" Name="Junk 4R" />
+		</group>
+	</population>
+	<population Name="Plaidman_SSR Trading Cards Junk 5">
+		<group Name="Items" Style="pickeach">
+			<table Number="1-2" Name="Plaidman_SSR Booster Or Cards" />
+			<table Number="1" Name="Junk 5R" />
+		</group>
+	</population>
+	<population Name="Plaidman_SSR Trading Cards Junk 6">
+		<group Name="Items" Style="pickeach">
+			<table Number="1-2" Name="Plaidman_SSR Booster Or Cards" />
+			<table Number="1" Name="Junk 6R" />
+		</group>
+	</population>
+	<population Name="Plaidman_SSR Trading Cards Junk 7">
+		<group Name="Items" Style="pickeach">
+			<table Number="2" Name="Plaidman_SSR Booster Or Cards" />
+			<table Number="1" Name="Junk 7R" />
+		</group>
+	</population>
+	<population Name="Plaidman_SSR Trading Cards Junk 8">
+		<group Name="Items" Style="pickeach">
+			<table Number="2" Name="Plaidman_SSR Booster Or Cards" />
+			<table Number="1" Name="Junk 8R" />
 		</group>
 	</population>
   
-  <population Name="Plaidman_SSR Booster Or Cards">
-    <group Name="Items" Style="pickone">
-      <object Weight="10" Number="1" Blueprint="Plaidman_SSR_Booster" />
-      <object Weight="10" Number="2-5" Blueprint="Plaidman_SSR_Card Random" />
-      <table Weight="1" Number="2" Name="Plaidman_SSR Booster Or Cards" />
+  <!-- 
+		50 weight gives most merchants between 5% and 10% chance to have a booster and roughly the same chance to have a random card.
+    This setup doesn't replace a pull from the table since each "Plaidman_SSR Trading Cards Junk #" table includes a guaranteed pull from its parent "Junk #R".
+    Across 1,000,000 table pulls, Tier7Wares has a random card ~13.5% of the time, a booster ~11.7%, and a starter deck ~5.5%.
+    Previous chance was below 1% for Tier7Wares (or any Tier#Wares) to have a single booster.
+  -->
+	<population Name="Junk 0R">
+		<group Name="Items" Style="pickone">
+			<table Weight="50" Number="1" Name="Plaidman_SSR Trading Cards Junk 0" />
+		</group>
+	</population>
+	<population Name="Junk 1R">
+		<group Name="Items" Style="pickone">
+			<table Weight="50" Number="1" Name="Plaidman_SSR Trading Cards Junk 1" />
+		</group>
+	</population>
+	<population Name="Junk 2R">
+		<group Name="Items" Style="pickone">
+      <table Weight="50" Number="1" Name="Plaidman_SSR Trading Cards Junk 2" />
+		</group>
+	</population>
+	<population Name="Junk 3R">
+		<group Name="Items" Style="pickone">
+      <table Weight="50" Number="1" Name="Plaidman_SSR Trading Cards Junk 3" />
+		</group>
+	</population>
+	<population Name="Junk 4R">
+		<group Name="Items" Style="pickone">
+      <table Weight="50" Number="1" Name="Plaidman_SSR Trading Cards Junk 4" />
     </group>
   </population>
-
-	<population Name="Trinkets 1">
-		<group Name="Items" Style="pickone">
-			<table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
+  <population Name="Junk 5R">
+    <group Name="Items" Style="pickone">
+      <table Weight="50" Number="1" Name="Plaidman_SSR Trading Cards Junk 5" />
+    </group>
+  </population>
+  <population Name="Junk 6R">
+    <group Name="Items" Style="pickone">
+      <table Weight="50" Number="1" Name="Plaidman_SSR Trading Cards Junk 6" />
+    </group>
+  </population>
+  <population Name="Junk 7R">
+    <group Name="Items" Style="pickone">
+      <table Weight="50" Number="1" Name="Plaidman_SSR Trading Cards Junk 7" />
 		</group>
 	</population>
-	<population Name="Trinkets 2">
+	<population Name="Junk 8R">
 		<group Name="Items" Style="pickone">
-      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
-		</group>
-	</population>
-	<population Name="Trinkets 3">
-		<group Name="Items" Style="pickone">
-			<table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
-		</group>
-	</population>
-	<population Name="Trinkets 4">
-		<group Name="Items" Style="pickone">
-      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
-		</group>
-	</population>
-	<population Name="Trinkets 5">
-		<group Name="Items" Style="pickone">
-      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
-		</group>
-	</population>
-	<population Name="Trinkets 6">
-		<group Name="Items" Style="pickone">
-      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
-		</group>
-	</population>
-	<population Name="Trinkets 7">
-		<group Name="Items" Style="pickone">
-      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
-		</group>
-	</population>
-	<population Name="Trinkets 8">
-		<group Name="Items" Style="pickone">
-      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
+      <table Weight="50" Number="1" Name="Plaidman_SSR Trading Cards Junk 8" />
 		</group>
 	</population>
 </populations>

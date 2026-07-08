@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ConsoleLib.Console;
 using XRL.World;
 using XRL.World.Parts;
@@ -7,6 +8,9 @@ using XRL.World.Parts;
 namespace Plaidman.SaltShuffleRevival {
 	[Serializable]
 	public class FactionEntity : IComposite, IDisposable {
+		public const int DEFAULT_WEIGHT = 5;
+		public const int HEROIC_WEIGHT = 1;
+		
 		public readonly string Blueprint;
 		public bool FromBlueprint;
 		public string Name;
@@ -27,8 +31,10 @@ namespace Plaidman.SaltShuffleRevival {
 		public string DetailColor;
 		public string FgColor;
 		public string Desc;
-		
-        public bool IsLovely;
+
+		public int Weight = DEFAULT_WEIGHT;
+
+		public Dictionary<string, string> Properties = new();
 
 		public bool WantFieldReflection => false;
 		public void Write(SerializationWriter writer) { writer.WriteNamedFields(this, GetType()); }
@@ -36,27 +42,36 @@ namespace Plaidman.SaltShuffleRevival {
 
 		public FactionEntity() {}
 
-		public FactionEntity(string blueprint) {
+		public FactionEntity(string blueprint, int Weight = DEFAULT_WEIGHT) {
 			Blueprint = blueprint;
-			Name = GameObjectFactory.Factory.GetBlueprint(blueprint).CachedDisplayNameStripped;
-		}
+			Name = GameObjectFactory.Factory.GetBlueprintIfExists(Blueprint)?.CachedDisplayNameStripped;
+			if (Name.IsNullOrEmpty()) {
+				Blueprint = "Dog";
+                Name = Blueprint;
+			}
+			this.Weight = Weight;
+			if (FactionTracker.IsHeroic(blueprint)) {
+				Properties[nameof(FactionTracker.IsHeroic)] = "true";
+            }
+            Properties[nameof(Blueprint)] = Blueprint;
+        }
 
 		public FactionEntity(GameObject go, bool fromBlueprint) {
 			Blueprint = null;
 
-			Name = go.DisplayNameOnlyDirectAndStripped;
-			Factions = FactionTracker.GetCreatureFactions(go);
+            Name = go.DisplayNameOnlyDirectAndStripped;
+            Factions = FactionTracker.GetCreatureFactions(go) ?? new();
 			Strength = go.GetStatValue("Strength");
 			Agility = go.GetStatValue("Agility");
 			Toughness = go.GetStatValue("Toughness");
 			Intelligence = go.GetStatValue("Intelligence");
-			Ego = go.GetStatValue("Ego");
 			Willpower = go.GetStatValue("Willpower");
+			Ego = go.GetStatValue("Ego");
 			Level = go.GetStatValue("Level");
 			Tier = go.GetTier();
 			IsBaetyl = go.Brain?.GetPrimaryFaction() == "Baetyl";
-            IsLovely = go.HasPart<Lovely>();
-			a = go.a;
+
+            a = go.a;
 			DetailColor = go.Render.DetailColor;
 			FgColor = ColorUtility.StripBackgroundFormatting(go.Render.ColorString);
 			FromBlueprint = fromBlueprint;
@@ -68,15 +83,29 @@ namespace Plaidman.SaltShuffleRevival {
 				Desc = ColorUtility.StripFormatting(go.GetPart<Description>()._Short);
 			}
 
+			Properties[nameof(go.Blueprint)] = go.Blueprint;
+
+			Properties[nameof(Factions)] = Factions.Aggregate((string)null, (a,n) => a + (!a.IsNullOrEmpty() ? "," : null) + n);
+
+			if (FactionTracker.IsHeroic(go)) {
+                Properties[nameof(FactionTracker.IsHeroic)] = "true";
+			}
+
+			if (go.HasPart<Lovely>()) { 
+				Properties[nameof(Lovely)] = "true";
+			}
+
+			Weight = GetWeight(go);
+
             // if the game object was created explicitly to create this FE, it should be tidied up
-            if (FromBlueprint) go.Obliterate();
+            if (FromBlueprint) go.Release();
         }
 
 		protected FactionEntity(FactionEntity fe) {
 			Blueprint = fe.Blueprint;
 
 			Name = fe.Name;
-			Factions = fe.Factions;
+			Factions = new(fe.Factions);
 
 			Strength = fe.Strength;
 			Agility = fe.Agility;
@@ -89,7 +118,7 @@ namespace Plaidman.SaltShuffleRevival {
 			Tier = fe.Tier;
 
 			IsBaetyl = fe.IsBaetyl;
-            IsLovely = fe.IsLovely;
+            Properties = new(fe.Properties);
 
 			a = fe.a;
 			DetailColor = fe.DetailColor;
@@ -97,19 +126,47 @@ namespace Plaidman.SaltShuffleRevival {
 			FromBlueprint = fe.FromBlueprint;
 
 			Desc = fe.Desc;
+
+			Weight = fe.Weight;
 		}
 
-		public FactionEntity GetCreature() {
+		public bool HasProperty(string Name)
+			=> !Name.IsNullOrEmpty()
+			&& Properties.ContainsKey(Name)
+			;
+
+		public string GetProperty(string Name, string Default = null)
+			=> Name.IsNullOrEmpty() || !Properties.TryGetValue(Name, out string value)
+			? Default
+            : value
+            ;
+
+		public bool TryGetProperty(string Name, out string Value)
+			=> (Value = GetProperty(Name)) != null
+            ;
+
+        public static int GetWeight(GameObjectBlueprint Blueprint)
+            => !FactionTracker.IsHeroic(Blueprint)
+            ? DEFAULT_WEIGHT
+            : HEROIC_WEIGHT
+            ;
+
+        public static int GetWeight(GameObject Object)
+            => !FactionTracker.IsHeroic(Object)
+            ? DEFAULT_WEIGHT
+            : HEROIC_WEIGHT
+            ;
+
+        public FactionEntity GetCreature() {
 			if (Blueprint != null) {
 				// create a new FE based on a GO so we can take advantage of BP dice rolls for stats
-				return new(GameObjectFactory.Factory.CreateSampleObject(Blueprint), true);
+				return new(GameObject.Create(Blueprint, Context: $"Plaidman.SaltShuffleRevival.{nameof(FactionEntity)}"), true);
 			}
-
 			return this;
 		}
 
-		public static FactionEntity GetCreature(string blueprint) {
-			using var blueprintFE = new FactionEntity(blueprint);
+		public static FactionEntity GetCreature(string blueprint, int Weight = DEFAULT_WEIGHT) {
+			using var blueprintFE = new FactionEntity(blueprint, Weight);
 			return blueprintFE.GetCreature();
         }
 
@@ -136,7 +193,7 @@ namespace Plaidman.SaltShuffleRevival {
             Tier = 0;
 
             IsBaetyl = false;
-            IsLovely = false;
+            Properties = null;
 
             a = null;
             DetailColor = null;
