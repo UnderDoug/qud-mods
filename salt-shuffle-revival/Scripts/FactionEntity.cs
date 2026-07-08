@@ -73,7 +73,17 @@ namespace Plaidman.SaltShuffleRevival {
 
             a = go.a;
 			DetailColor = go.Render.DetailColor;
-			FgColor = ColorUtility.StripBackgroundFormatting(go.Render.ColorString);
+			// Gets the foreground colour whether it's been defined as the tile color or as a color string
+			string fgColor = go.Render.GetTileForegroundColor();
+			// stops cards from being only a single color (in order to improve the card's visuals)
+			if (fgColor == DetailColor) {
+				// switches the fg shade; if it was dark, make it bright, if it was bright make it dark
+				fgColor = fgColor.ToLower() == fgColor ? fgColor.ToUpper() : fgColor.ToLower();
+				// don't use dark black
+				if (fgColor == "k") fgColor = "y";
+			}
+            FgColor = $"&{fgColor}";
+
 			FromBlueprint = fromBlueprint;
 
 			try {
@@ -89,6 +99,7 @@ namespace Plaidman.SaltShuffleRevival {
 
 			if (FactionTracker.IsHeroic(go)) {
                 Properties[nameof(FactionTracker.IsHeroic)] = "true";
+				Properties["HeroicIcon"] = go.GetTile();
 			}
 
 			if (go.HasPart<Lovely>()) { 

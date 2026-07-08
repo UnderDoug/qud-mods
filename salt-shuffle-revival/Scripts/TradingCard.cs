@@ -176,13 +176,16 @@ namespace XRL.World.Parts {
         public override bool HandleEvent(AdjustValueEvent e) {
 			if (e.Object == ParentObject) {
 				if (GetInterestedParty(ParentObject) is GameObject interestedParty) {
-					if (!Faction.IsNullOrEmpty() && FactionTracker.GetCreatureFactions(interestedParty).Contains(Faction)) {
-						if (interestedParty.Blueprint != Blueprint || IsSelling(interestedParty, ParentObject.Holder)) {
-                            // makes traders undervalue cards of their own faction (they have/see a lot of them)
+
+                    Properties["LastTrader"] = interestedParty.BaseDisplayNameStripped;
+
                     using var factions = ScopeDisposedList<string>.GetFromPool();
 					if (TryGetProperty(nameof(FactionEntity.Factions), out string factionsString)
 						&& factionsString.CachedCommaExpansion() is IEnumerable<string> factionsEnumerable
 						&& !factionsEnumerable.IsNullOrEmpty()) {
+
+                        Properties["LastTraderFactions"] = factionsString;
+
                         factions.AddRange(factionsEnumerable);
 					} else if (!Faction.IsNullOrEmpty()) { 
 						factions.Add(Faction);
@@ -193,12 +196,17 @@ namespace XRL.World.Parts {
                             // makes traders undervalue cards of any of their own factions (they have/see a lot of them)
                             // unless it's a card of themselves
                             UnderValueMulti(ref e.Value); 
+                            Properties.Remove("LastTraderDepictsSelf");
 						} else {
                             // makes traders highly overvalue cards of themselves (out of vanity)
                             OverValueMulti(ref e.Value, 7.0); // 7.5 results in a max-ego player being able to repeatedly trade back and forth for profit.
+							Properties["LastTraderDepictsSelf"] = "Yes";
 						}
                     }
 					int traderFeeling = GetAggregateFeelingLevel(interestedParty);
+
+					Properties["LastTraderFeeling"] = $"{traderFeeling}";
+
 					if (!IsSelling(interestedParty, ParentObject)) {
                         // trader wont pay for cards from factions (or combinations thereof) they hate
                         if (traderFeeling < -1) {
@@ -259,6 +267,15 @@ namespace XRL.World.Parts {
 				}
 				e.AddEntry(this, nameof(Properties), propertyPairs.Aggregate((string)null, (a, n) => a + (!a.IsNullOrEmpty() ? "\n" : null) + n) ?? "empty");
 			}
+			if (Properties.TryGetValue("LastTrader", out string lastTrader)) {
+				using (var lastTraderInfo = ScopeDisposedList<string>.GetFromPool()) {
+                    lastTraderInfo.Add($"Name: {lastTrader}");
+                    foreach (var lastTraderProp in Properties.Keys.Where(k => k.StartsWith("LastTrader") && k != "LastTrader")) {
+                        lastTraderInfo.Add($"{lastTraderProp["LastTrader".Length..]}: {Properties[lastTraderProp]}");
+                    }
+                    e.AddEntry(this, "Last Trader", lastTraderInfo.Aggregate((string)null, (a, n) => a + (!a.IsNullOrEmpty() ? "\n" : null) + n));
+                }
+            }
 			return base.HandleEvent(e);
 		}
 
@@ -431,7 +448,7 @@ namespace XRL.World.Parts {
 				builder.Append("A trading card with a stylized illustration of =a==name= plus various cryptic statistics.\n\n");
 			}
 
-			var factions = fe.Factions;
+			var factions = fe.Factions?.Select(s => Factions.Get(s).DisplayName.Capitalize())?.ToList();
 			if (factions.Count > 0) {
 				builder.Append("{{G|Allegiance: =factions=}}\n");
 			}
@@ -483,5 +500,17 @@ namespace XRL.World.Parts {
         public bool TryGetProperty(string Name, out string Value)
             => (Value = GetProperty(Name)) != null
             ;
+
+		// this makes it so that for cards depicting "heroic" creatures, their tile gets used but only in the "Look UI", nowhere else
+        public override bool Render(RenderEvent E)
+        {
+            if (E.Context == "Look,Tooltip"
+                && IsHeroic()
+                && TryGetProperty("HeroicIcon", out string heroicIcon)
+				&& !heroicIcon.IsNullOrEmpty()) {
+				E.Tile = heroicIcon;
+            }
+            return base.Render(E);
+        }
 	}
 }
