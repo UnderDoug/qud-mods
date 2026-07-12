@@ -6,7 +6,7 @@ using XRL.World.Parts;
 
 namespace Plaidman.SaltShuffleRevival {
 	[Serializable]
-	public class FactionEntity : IComposite {
+	public class FactionEntity : IComposite, IDisposable {
 		public readonly string Blueprint;
 		public bool FromBlueprint;
 		public string Name;
@@ -38,13 +38,23 @@ namespace Plaidman.SaltShuffleRevival {
 
 		public FactionEntity(string blueprint) {
 			Blueprint = blueprint;
-			Name = GameObjectFactory.Factory.GetBlueprint(blueprint).CachedDisplayNameStripped;
+			Name = GameObjectFactory.Factory.GetBlueprint(blueprint).DisplayName();
+            
+            if (!Options.EnableCardNameColors)
+                Name = Name.Strip();
 		}
 
 		public FactionEntity(GameObject go, bool fromBlueprint) {
 			Blueprint = null;
 
-			Name = go.DisplayNameOnlyDirectAndStripped;
+			if (Options.EnableCardLongNames)
+                Name = go.GetDisplayName(AsIfKnown: true, Single: true, NoConfusion: true, Short: true);
+            else
+                Name = go.DisplayNameOnlyDirect;
+            
+            if (!Options.EnableCardNameColors)
+                Name = Name.Strip();
+			
 			Factions = FactionTracker.GetCreatureFactions(go);
 			Strength = go.GetStatValue("Strength");
 			Agility = go.GetStatValue("Agility");
@@ -66,11 +76,38 @@ namespace Plaidman.SaltShuffleRevival {
 			} catch (Exception) {
 				// traipsing mortar was having issues getting description in game init, so we just default to the non-minevented short description
 				Desc = ColorUtility.StripFormatting(go.GetPart<Description>()._Short);
-            }
+			}
 
             // if the game object was created explicitly to create this FE, it should be tidied up
-            if (FromBlueprint) go.Obliterate();
+            if (FromBlueprint) go.Release();
         }
+
+		protected FactionEntity(FactionEntity fe) {
+			Blueprint = fe.Blueprint;
+
+			Name = fe.Name;
+			Factions = fe.Factions;
+
+			Strength = fe.Strength;
+			Agility = fe.Agility;
+			Toughness = fe.Toughness;
+			Intelligence = fe.Intelligence;
+			Ego = fe.Ego;
+			Willpower = fe.Willpower;
+
+			Level = fe.Level;
+			Tier = fe.Tier;
+
+			IsBaetyl = fe.IsBaetyl;
+            IsLovely = fe.IsLovely;
+
+			a = fe.a;
+			DetailColor = fe.DetailColor;
+			FgColor = fe.FgColor;
+			FromBlueprint = fe.FromBlueprint;
+
+			Desc = fe.Desc;
+		}
 
 		public FactionEntity GetCreature() {
 			if (Blueprint != null) {
@@ -81,8 +118,42 @@ namespace Plaidman.SaltShuffleRevival {
 			return this;
 		}
 
+		public static FactionEntity GetCreature(string blueprint) {
+			using var blueprintFE = new FactionEntity(blueprint);
+			return blueprintFE.GetCreature();
+        }
+
+		public FactionEntity Clone() {
+			return new FactionEntity(this);
+		}
+
 		public bool Equals(FactionEntity other) {
 			return Name == other.Name && Tier == other.Tier;
 		}
-	}
+
+        public void Dispose() {
+            Name = null;
+            Factions = null;
+
+            Strength = 0;
+            Agility = 0;
+            Toughness = 0;
+            Intelligence = 0;
+            Ego = 0;
+            Willpower = 0;
+
+            Level = 0;
+            Tier = 0;
+
+            IsBaetyl = false;
+            IsLovely = false;
+
+            a = null;
+            DetailColor = null;
+            FgColor = null;
+            FromBlueprint = false;
+
+            Desc = null;
+        }
+    }
 }

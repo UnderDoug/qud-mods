@@ -4,45 +4,53 @@
 			<object Blueprint="Plaidman_SSR_Starter" Number="1"></object>
 		</group>
 	</population>
+  
+  <population Name="Plaidman_SSR Booster Or Cards">
+    <group Name="Items" Style="pickone">
+      <object Weight="10" Number="1" Blueprint="Plaidman_SSR_Booster" />
+      <object Weight="10" Number="2-5" Blueprint="Plaidman_SSR_Card Random" />
+      <table Weight="1" Number="2" Name="Plaidman_SSR Booster Or Cards" />
+    </group>
+  </population>
 
 	<population Name="Trinkets 1">
 		<group Name="Items" Style="pickone">
-			<object Weight="35" Number="1" Blueprint="Plaidman_SSR_Booster" />
+			<table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
 		</group>
 	</population>
 	<population Name="Trinkets 2">
 		<group Name="Items" Style="pickone">
-			<object Weight="35" Number="1" Blueprint="Plaidman_SSR_Booster" />
+      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
 		</group>
 	</population>
 	<population Name="Trinkets 3">
 		<group Name="Items" Style="pickone">
-			<object Weight="35" Number="1" Blueprint="Plaidman_SSR_Booster" />
+			<table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
 		</group>
 	</population>
 	<population Name="Trinkets 4">
 		<group Name="Items" Style="pickone">
-			<object Weight="35" Number="1" Blueprint="Plaidman_SSR_Booster" />
+      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
 		</group>
 	</population>
 	<population Name="Trinkets 5">
 		<group Name="Items" Style="pickone">
-			<object Weight="35" Number="1" Blueprint="Plaidman_SSR_Booster" />
+      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
 		</group>
 	</population>
 	<population Name="Trinkets 6">
 		<group Name="Items" Style="pickone">
-			<object Weight="35" Number="1" Blueprint="Plaidman_SSR_Booster" />
+      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
 		</group>
 	</population>
 	<population Name="Trinkets 7">
 		<group Name="Items" Style="pickone">
-			<object Weight="35" Number="1" Blueprint="Plaidman_SSR_Booster" />
+      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
 		</group>
 	</population>
 	<population Name="Trinkets 8">
 		<group Name="Items" Style="pickone">
-			<object Weight="35" Number="1" Blueprint="Plaidman_SSR_Booster" />
+      <table Weight="35" Number="1" Name="Plaidman_SSR Booster Or Cards" />
 		</group>
 	</population>
 </populations>

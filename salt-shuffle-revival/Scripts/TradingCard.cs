@@ -13,6 +13,9 @@ namespace XRL.World.Parts {
 		public int PointValue = 0;
 		public string ShortDisplayName = "";
 		public bool Foil = false;
+		public bool Random;
+		public string Faction;
+		public string Blueprint;
 
 		public override void Read(GameObject basis, SerializationReader reader) {
 			if (reader.ModVersions["Plaidman_SaltShuffleRevival"] == new Version("1.0.0")) {
@@ -32,6 +35,7 @@ namespace XRL.World.Parts {
 			registrar.Register(ObjectCreatedEvent.ID);
 			registrar.Register(GetIntrinsicValueEvent.ID);
 			registrar.Register(The.Game, SSR_UninstallEvent.ID);
+			registrar.Register(GetDebugInternalsEvent.ID);
 			base.Register(go, registrar);
 		}
 
@@ -47,9 +51,34 @@ namespace XRL.World.Parts {
 			return base.HandleEvent(e);
 		}
 
-        public override bool HandleEvent(ObjectCreatedEvent e) {
-            _ = ParentObject.BaseID; // forces the ID to be generated at the point of object creation.
-            return base.HandleEvent(e);
+		public override bool HandleEvent(ObjectCreatedEvent e) {
+            // if Random is set true in the object blueprint, find a random creature, set it
+			if (Random) {
+				SetCreature(FactionTracker.GetRandomCreature());
+            // if Blueprint is defined in the object blueprint, find the FE for it, set it; fall back to random creature
+            } else if (!Blueprint.IsNullOrEmpty()) {
+				if (FactionTracker.RequireCreature(Blueprint) is FactionEntity blueprintFE) {
+					SetCreature(blueprintFE);
+				} else {
+					SetCreature(FactionTracker.GetRandomCreature());
+				}
+			// if Faction is defined in the object blueprint, find a random FE for it, set it; fall back to random creature
+			} else if (!Faction.IsNullOrEmpty()) {
+				if (FactionTracker.GetRandomCreature(Faction) is FactionEntity factionFE) {
+					SetCreature(factionFE);
+				} else {
+					SetCreature(FactionTracker.GetRandomCreature());
+				}
+			}
+			return base.HandleEvent(e);
+		}
+
+		public override bool HandleEvent(GetDebugInternalsEvent e) {
+			e.AddEntry(this, nameof(ParentObject), ParentObject.Blueprint);
+			e.AddEntry(this, nameof(Random), Random);
+			e.AddEntry(this, nameof(Faction), Faction ?? "undefined");
+			e.AddEntry(this, nameof(Blueprint), Blueprint ?? "undefined");
+			return base.HandleEvent(e);
         }
 
         // forces no stacking
@@ -126,15 +155,20 @@ namespace XRL.World.Parts {
 
             PointValue = SunScore + MoonScore + StarScore;
 
-            SetColors(fe);
-            SetDescription(fe);
-            SetDisplayName(fe);
+			Faction = fe.Factions.FirstOrDefault();
 
-            if (fe.IsLovely)
-                ParentObject.RequirePart<Lovely>();
-            else
-                ParentObject.RemovePart<Lovely>();
-        }
+			SetColors(fe);
+			SetDescription(fe);
+			SetDisplayName(fe);
+            
+      if (Foil)
+          ParentObject.RequirePart<UD_AnimatedMaterialFoil>();
+          
+      if (fe.IsLovely)
+          ParentObject.RequirePart<Lovely>();
+      else
+          ParentObject.RemovePart<Lovely>();
+		}
 
         private void NonBlueprintVariance(FactionEntity fe, Random Rnd = null) {
             if (fe.FromBlueprint) return;
@@ -211,7 +245,7 @@ namespace XRL.World.Parts {
 			var builder = new StringBuilder();
 
 			if (Foil) {
-				builder.Append("A reflective trading card with an animated illustration of =a==name= plus various cryptic statistics. The card shimmers when viewed at different angles.\n\n");
+				builder.Append("A {{Y|reflective}} trading card with an animated illustration of =a==name= plus various cryptic statistics. The card {{Y|shimmers}} when viewed at different angles.\n\n");
 			} else {
 				builder.Append("A trading card with a stylized illustration of =a==name= plus various cryptic statistics.\n\n");
 			}
@@ -237,9 +271,10 @@ namespace XRL.World.Parts {
 		}
 
 		private void SetDisplayName(FactionEntity fe) {
-			var builder = new StringBuilder("=name= {{W|=sun=}}/{{C|=moon=}}/{{M|=star=}}");
+			var builder = new StringBuilder("=name==foil= {{W|=sun=}}/{{C|=moon=}}/{{M|=star=}}");
 			builder.StartReplace()
 				.AddReplacer("name", fe.Name)
+				.AddReplacer("foil", Foil ? " ({{Y|F}})" : null)
 				.AddReplacer("sun", SunScore.ToString())
 				.AddReplacer("moon", MoonScore.ToString())
 				.AddReplacer("star", StarScore.ToString())
