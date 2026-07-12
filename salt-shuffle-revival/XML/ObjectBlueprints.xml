@@ -1,15 +1,15 @@
 <objects>
 	<object Name="Plaidman_SSR_Booster" Inherits="Item">
-		<part Name="Render" Tile="items/SSR_Booster.png" DetailColor="O" ColorString="&amp;C" />
+		<part Name="Render" DisplayName="[Salt Shuffle Booster]" Tile="items/SSR_Booster.png" DetailColor="O" ColorString="&amp;C" />
 		<part Name="Physics" Weight="1" Category="Trading Cards" />
 		<part Name="SSR_BoosterPack" />
 		<part Name="Description" Short="A pack of five Salt Shuffle cards, all belonging to one specific faction." />
 		<part Name="Commerce" Value="6" />
 		<part Name="NoRust" />
+    <intproperty Name="NeverStack" Value="1" />
 	</object>
-	<object Name="Plaidman_SSR_Starter" Inherits="Item">
-		<part Name="Render" Tile="items/SSR_Booster.png" DetailColor="W" ColorString="&amp;y" />
-		<part Name="Physics" Weight="1" Category="Trading Cards" />
+	<object Name="Plaidman_SSR_Starter" Inherits="Plaidman_SSR_Booster">
+		<part Name="Render" DisplayName="Salt Shuffle starter deck" DetailColor="W" ColorString="&amp;y" />
 		<part Name="SSR_BoosterPack" Starter="true" />
 		<part Name="Description" Short="A pack of twelve random Salt Shuffle cards, enough to get started playing the game." />
 		<part Name="Commerce" Value="0" />
@@ -21,9 +21,11 @@
 		<part Name="Description" Short="A Salt Shuffle card. Fingerprint smudges make it hard to read." />
 		<part Name="Physics" Weight="0" Category="Trading Cards" />
 		<part Name="Commerce" Value="1" />
-		<tag Name="ExcludeFromDynamicEncounters" />
+		<tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+    <tag Name="BaseObject" Value="*noinherit" />
 		<tag Name="NoSparkingQuest" />
 		<part Name="NoRust" />
+    <intproperty Name="NeverStack" Value="1" />
 	</object>
 	<object Name="Plaidman_SSR_CardPouch" Inherits="Chest">
 		<part Name="Description" Short="A small leather reusable pouch perfectly sized to store Salt Shuffle cards. There is a small spot of blood on the flap." />
@@ -32,23 +34,79 @@
 		<part Name="Physics" Weight="1" Category="Trading Cards" />
 		<tag Name="ExcludeFromDynamicEncounters" />
 		<tag Name="NoSparkingQuest" />
+    <intproperty Name="NeverStack" Value="1" />
 	</object>
 	<object Name="Plaidman_SSR_BoosterBox" Inherits="Chest">
 		<part Name="Description" Short="A box of ten assorted Salt Shuffle card packs." />
 		<part Name="Render" DisplayName="Salt Shuffle booster box" />
 		<part Name="Physics" Weight="1" Category="Trading Cards" />
-		<!-- Number="10" generates 10x of the same faction -->
-		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="1" />
-		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="1" />
-		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="1" />
-		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="1" />
-		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="1" />
-		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="1" />
-		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="1" />
-		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="1" />
-		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="1" />
-		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="1" />
+		<inventoryobject Blueprint="Plaidman_SSR_Booster" Number="10" />
 		<tag Name="ExcludeFromDynamicEncounters" />
 		<tag Name="NoSparkingQuest" />
+    <intproperty Name="NeverStack" Value="1" />
 	</object>
+
+  <!-- Pretty literally any cached FactionEntity -->
+  <object Name="Plaidman_SSR_Card Random" Inherits="Plaidman_SSR_Card">
+    <part Name="SSR_Card" Random="true" />
+  </object>
+
+  <!--
+		Specific cards
+    Mostly for example so excluded from dynamic tables, but able to be wished in via blueprint alone
+  -->
+  <object Name="Plaidman_SSR_Card Faction Wardens" Inherits="Plaidman_SSR_Card">
+    <part Name="SSR_Card" Faction="Wardens" />
+    <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+  </object>
+
+  <object Name="Plaidman_SSR_Card Faction Dromad" Inherits="Plaidman_SSR_Card">
+    <part Name="SSR_Card" Faction="Dromad" />
+    <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+  </object>
+
+  <object Name="Plaidman_SSR_Card Warden Une" Inherits="Plaidman_SSR_Card">
+    <part Name="SSR_Card" Blueprint="Une" />
+    <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+  </object>
+
+  <object Name="Plaidman_SSR_Card Snapjaw Scavenger" Inherits="Plaidman_SSR_Card">
+    <part Name="SSR_Card" Blueprint="Snapjaw Scavenger" />
+    <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+  </object>
+  
+  <!--
+		Specific boosters
+    Mostly for example so excluded from dynamic tables, but able to be wished in via blueprint alone
+  -->
+  <object Name="Plaidman_SSR_Booster YdFreehold" Inherits="Plaidman_SSR_Booster">
+    <part Name="Render" DisplayName="[Salt Shuffle booster: YdFreehold]" />
+    <part Name="SSR_BoosterPack" Faction="YdFreehold" />
+    <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+  </object>
+
+  <object Name="Plaidman_SSR_Booster Trees" Inherits="Plaidman_SSR_Booster">
+    <part Name="Render" DisplayName="[Salt Shuffle booster: Trees]" />
+    <part Name="SSR_BoosterPack" Faction="Trees" />
+    <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+  </object>
+
+  <object Name="Plaidman_SSR_Booster Strangers" Inherits="Plaidman_SSR_Booster">
+    <part Name="Render" DisplayName="[Salt Shuffle booster: Strangers]" />
+    <part Name="SSR_BoosterPack" Faction="Strangers" />
+    <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+  </object>
+
+  <object Name="Plaidman_SSR_Booster Fish" Inherits="Plaidman_SSR_Booster">
+    <part Name="Render" DisplayName="[Salt Shuffle booster: Fish]" />
+    <part Name="SSR_BoosterPack" Faction="Fish" />
+    <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+  </object>
+
+  <object Name="Plaidman_SSR_Booster Barathrumites" Inherits="Plaidman_SSR_Booster">
+    <part Name="Render" DisplayName="[Salt Shuffle booster: Barathrumites]" />
+    <part Name="SSR_BoosterPack" Faction="Barathrumites" />
+    <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+  </object>
+  
 </objects>
