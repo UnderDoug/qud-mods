@@ -14,8 +14,8 @@ namespace XRL.Wish {
 			switch (split[0].ToLower()) {
 				case "booster":
 					if (split.Length == 1 || split[1].Length == 0 || (split.Length == 2 && split[1].EqualsNoCase("cosmetic"))) {
-                        ParseFaction(FactionTracker.GetRandomFaction(split.Length < 2 ? The.Player.GetSeededRandom($"Plaidman.SaltShuffleRevival.Wish") : Stat.Rnd2));
-                    }
+						ParseFaction(FactionTracker.GetRandomFaction(split.Length < 2 ? The.Player.GetSeededRandom($"Plaidman.SaltShuffleRevival.Wish") : Stat.Rnd2));
+					}
 					else ParseFaction(split[1]);
 					break;
 

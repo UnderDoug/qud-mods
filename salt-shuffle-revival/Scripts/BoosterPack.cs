@@ -34,29 +34,29 @@ namespace XRL.World.Parts {
 			return base.HandleEvent(e);
 		}
 
-        public override bool HandleEvent(ObjectCreatedEvent e) {
-            _ = ParentObject.BaseID; // forces the ID to be generated at the point of object creation.
-            if (Starter) {
-                Faction = null;
-                ParentObject.DisplayName = "Salt Shuffle starter deck";
-            } else {
-                // this allows for object blueprints that inherit from Plaidman_SSR_Booster to specify a faction
-                if (Faction.IsNullOrEmpty())
-                    Faction = FactionTracker.GetRandomFaction(ParentObject.GetSeededRandom("Plaidman.SaltShuffleRevival.Booster"));
-                else
-                    Faction = FactionTracker.ClosestFaction(Faction);
-                OverrideFaction(Faction);
-            }
+		public override bool HandleEvent(ObjectCreatedEvent e) {
+			_ = ParentObject.BaseID; // forces the ID to be generated at the point of object creation.
+			if (Starter) {
+				Faction = null;
+				ParentObject.DisplayName = "Salt Shuffle starter deck";
+			} else {
+				// this allows for object blueprints that inherit from Plaidman_SSR_Booster to specify a faction
+				if (Faction.IsNullOrEmpty())
+					Faction = FactionTracker.GetRandomFaction(ParentObject.GetSeededRandom("Plaidman.SaltShuffleRevival.Booster"));
+				else
+					Faction = FactionTracker.ClosestFaction(Faction);
+				OverrideFaction(Faction);
+			}
 
-            return base.HandleEvent(e);
-        }
+			return base.HandleEvent(e);
+		}
 
-        // forces no stacking
-        public override bool SameAs(IPart p)
-            => false
-            ;
+		// forces no stacking
+		public override bool SameAs(IPart p)
+			=> false
+			;
 
-        public void OverrideFaction(string faction) {
+		public void OverrideFaction(string faction) {
 			Faction = faction;
 			ParentObject.DisplayName = "pack of Salt Shuffle cards: " + Factions.Get(faction).DisplayName;
 		}
@@ -88,9 +88,9 @@ namespace XRL.World.Parts {
 			var additionalCards = Event.NewGameObjectList();
 			var allCards = Event.NewGameObjectList();
 
-            var rnd = ParentObject.GetSeededRandom($"Plaidman.SaltShuffleRevival.InvCommandUnwrap");
+			var rnd = ParentObject.GetSeededRandom($"Plaidman.SaltShuffleRevival.InvCommandUnwrap");
 
-            GameObject firstCard = null;
+			GameObject firstCard = null;
 			var qty = Starter ? 12 : 5;
 			for (int i = 0; i < qty; i++) {
 				var card = Starter

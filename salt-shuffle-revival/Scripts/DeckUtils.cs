@@ -50,8 +50,8 @@ namespace Plaidman.SaltShuffleRevival {
 				.ToList();
 			if (factions.Count == 0) return;
 
-            var rnd = creature.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(SSR_CardPouch)}::{creature.BaseID}");
-            
+			var rnd = creature.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(SSR_CardPouch)}::{creature.BaseID}");
+			
 			var part = creature.AddPart<SSR_CardPouch>();
 			part.Cards = new(12);
 			for(int i = 0; i < part.Cards.Capacity; i++) {

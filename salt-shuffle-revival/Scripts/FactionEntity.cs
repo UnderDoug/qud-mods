@@ -28,7 +28,7 @@ namespace Plaidman.SaltShuffleRevival {
 		public string FgColor;
 		public string Desc;
 		
-        public bool IsLovely;
+		public bool IsLovely;
 
 		public bool WantFieldReflection => false;
 		public void Write(SerializationWriter writer) { writer.WriteNamedFields(this, GetType()); }
@@ -39,21 +39,21 @@ namespace Plaidman.SaltShuffleRevival {
 		public FactionEntity(string blueprint) {
 			Blueprint = blueprint;
 			Name = GameObjectFactory.Factory.GetBlueprint(blueprint).DisplayName();
-            
-            if (!Options.EnableCardNameColors)
-                Name = Name.Strip();
+			
+			if (!Options.EnableCardNameColors)
+				Name = Name.Strip();
 		}
 
 		public FactionEntity(GameObject go, bool fromBlueprint) {
 			Blueprint = null;
 
 			if (Options.EnableCardLongNames)
-                Name = go.GetDisplayName(AsIfKnown: true, Single: true, NoConfusion: true, Short: true);
-            else
-                Name = go.DisplayNameOnlyDirect;
-            
-            if (!Options.EnableCardNameColors)
-                Name = Name.Strip();
+				Name = go.GetDisplayName(AsIfKnown: true, Single: true, NoConfusion: true, Short: true);
+			else
+				Name = go.DisplayNameOnlyDirect;
+			
+			if (!Options.EnableCardNameColors)
+				Name = Name.Strip();
 			
 			Factions = FactionTracker.GetCreatureFactions(go);
 			Strength = go.GetStatValue("Strength");
@@ -65,7 +65,7 @@ namespace Plaidman.SaltShuffleRevival {
 			Level = go.GetStatValue("Level");
 			Tier = go.GetTier();
 			IsBaetyl = go.Brain?.GetPrimaryFaction() == "Baetyl";
-            IsLovely = go.HasPart<Lovely>();
+			IsLovely = go.HasPart<Lovely>();
 			a = go.a;
 			DetailColor = go.Render.DetailColor;
 			FgColor = ColorUtility.StripBackgroundFormatting(go.Render.ColorString);
@@ -78,9 +78,9 @@ namespace Plaidman.SaltShuffleRevival {
 				Desc = ColorUtility.StripFormatting(go.GetPart<Description>()._Short);
 			}
 
-            // if the game object was created explicitly to create this FE, it should be tidied up
-            if (FromBlueprint) go.Release();
-        }
+			// if the game object was created explicitly to create this FE, it should be tidied up
+			if (FromBlueprint) go.Release();
+		}
 
 		protected FactionEntity(FactionEntity fe) {
 			Blueprint = fe.Blueprint;
@@ -99,7 +99,7 @@ namespace Plaidman.SaltShuffleRevival {
 			Tier = fe.Tier;
 
 			IsBaetyl = fe.IsBaetyl;
-            IsLovely = fe.IsLovely;
+			IsLovely = fe.IsLovely;
 
 			a = fe.a;
 			DetailColor = fe.DetailColor;
@@ -111,9 +111,9 @@ namespace Plaidman.SaltShuffleRevival {
 
 		public FactionEntity GetCreature() {
 			if (Blueprint != null) {
-                // create a new FE based on a GO so we can take advantage of BP dice rolls for stats
-                return new(GameObject.Create(Blueprint, Context: $"Plaidman.SaltShuffleRevival.{nameof(FactionEntity)}"), true);
-            }
+				// create a new FE based on a GO so we can take advantage of BP dice rolls for stats
+				return new(GameObject.Create(Blueprint, Context: $"Plaidman.SaltShuffleRevival.{nameof(FactionEntity)}"), true);
+			}
 
 			return this;
 		}
@@ -121,7 +121,7 @@ namespace Plaidman.SaltShuffleRevival {
 		public static FactionEntity GetCreature(string blueprint) {
 			using var blueprintFE = new FactionEntity(blueprint);
 			return blueprintFE.GetCreature();
-        }
+		}
 
 		public FactionEntity Clone() {
 			return new FactionEntity(this);
@@ -131,29 +131,29 @@ namespace Plaidman.SaltShuffleRevival {
 			return Name == other.Name && Tier == other.Tier;
 		}
 
-        public void Dispose() {
-            Name = null;
-            Factions = null;
+		public void Dispose() {
+			Name = null;
+			Factions = null;
 
-            Strength = 0;
-            Agility = 0;
-            Toughness = 0;
-            Intelligence = 0;
-            Ego = 0;
-            Willpower = 0;
+			Strength = 0;
+			Agility = 0;
+			Toughness = 0;
+			Intelligence = 0;
+			Ego = 0;
+			Willpower = 0;
 
-            Level = 0;
-            Tier = 0;
+			Level = 0;
+			Tier = 0;
 
-            IsBaetyl = false;
-            IsLovely = false;
+			IsBaetyl = false;
+			IsLovely = false;
 
-            a = null;
-            DetailColor = null;
-            FgColor = null;
-            FromBlueprint = false;
+			a = null;
+			DetailColor = null;
+			FgColor = null;
+			FromBlueprint = false;
 
-            Desc = null;
-        }
-    }
+			Desc = null;
+		}
+	}
 }

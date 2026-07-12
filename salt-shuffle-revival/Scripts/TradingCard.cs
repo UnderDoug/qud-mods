@@ -52,11 +52,11 @@ namespace XRL.World.Parts {
 		}
 
 		public override bool HandleEvent(ObjectCreatedEvent e) {
-            // if Random is set true in the object blueprint, find a random creature, set it
+			// if Random is set true in the object blueprint, find a random creature, set it
 			if (Random) {
 				SetCreature(FactionTracker.GetRandomCreature());
-            // if Blueprint is defined in the object blueprint, find the FE for it, set it; fall back to random creature
-            } else if (!Blueprint.IsNullOrEmpty()) {
+			// if Blueprint is defined in the object blueprint, find the FE for it, set it; fall back to random creature
+			} else if (!Blueprint.IsNullOrEmpty()) {
 				if (FactionTracker.RequireCreature(Blueprint) is FactionEntity blueprintFE) {
 					SetCreature(blueprintFE);
 				} else {
@@ -79,44 +79,44 @@ namespace XRL.World.Parts {
 			e.AddEntry(this, nameof(Faction), Faction ?? "undefined");
 			e.AddEntry(this, nameof(Blueprint), Blueprint ?? "undefined");
 			return base.HandleEvent(e);
-        }
+		}
 
-        // forces no stacking
-        public override bool SameAs(IPart p)
-            => false
-            ;
+		// forces no stacking
+		public override bool SameAs(IPart p)
+			=> false
+			;
 
-        // opening a starter deck
-        public static GameObject CreateCard(Random Rnd = null) {
-            var card = GameObject.Create("Plaidman_SSR_Card", Context: "Plaidman.SaltShuffleRevival.StarterDeck");
-            var part = card.GetPart<SSR_Card>();
-            Rnd ??= card.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(CreateCard)}");
-            part.SetCreature(FactionTracker.GetRandomCreature(Rnd: Rnd));
-            return card;
-        }
+		// opening a starter deck
+		public static GameObject CreateCard(Random Rnd = null) {
+			var card = GameObject.Create("Plaidman_SSR_Card", Context: "Plaidman.SaltShuffleRevival.StarterDeck");
+			var part = card.GetPart<SSR_Card>();
+			Rnd ??= card.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(CreateCard)}");
+			part.SetCreature(FactionTracker.GetRandomCreature(Rnd: Rnd));
+			return card;
+		}
 
-        // opening a booster and generate a deck for an opponent
-        public static GameObject CreateCard(string faction, Random Rnd = null) {
-            var card = GameObject.Create("Plaidman_SSR_Card", Context: $"Plaidman.SaltShuffleRevival.Booster::{faction}");
-            var part = card.GetPart<SSR_Card>();
-            Rnd ??= card.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(CreateCard)}.{faction}");
-            part.SetCreature(FactionTracker.GetRandomCreature(faction, Rnd: Rnd));
-            return card;
-        }
+		// opening a booster and generate a deck for an opponent
+		public static GameObject CreateCard(string faction, Random Rnd = null) {
+			var card = GameObject.Create("Plaidman_SSR_Card", Context: $"Plaidman.SaltShuffleRevival.Booster::{faction}");
+			var part = card.GetPart<SSR_Card>();
+			Rnd ??= card.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(CreateCard)}.{faction}");
+			part.SetCreature(FactionTracker.GetRandomCreature(faction, Rnd: Rnd));
+			return card;
+		}
 
-        // when the opponent is bested in card combat
-        public static GameObject CreateCard(GameObject go) {
-            var card = GameObject.Create("Plaidman_SSR_Card", Context: $"Plaidman.SaltShuffleRevival.Victory::{go.BaseID}");
-            var part = card.GetPart<SSR_Card>();
-            part.SetCreature(new FactionEntity(go, false));
-            return card;
-        }
+		// when the opponent is bested in card combat
+		public static GameObject CreateCard(GameObject go) {
+			var card = GameObject.Create("Plaidman_SSR_Card", Context: $"Plaidman.SaltShuffleRevival.Victory::{go.BaseID}");
+			var part = card.GetPart<SSR_Card>();
+			part.SetCreature(new FactionEntity(go, false));
+			return card;
+		}
 
-        private void SetCreature(FactionEntity fe) {
-            var rnd = ParentObject.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(SSR_Card)}.{nameof(SetCreature)}");
-            fe ??= FactionTracker.GetRandomCreature(Rnd: rnd);
+		private void SetCreature(FactionEntity fe) {
+			var rnd = ParentObject.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(SSR_Card)}.{nameof(SetCreature)}");
+			fe ??= FactionTracker.GetRandomCreature(Rnd: rnd);
 
-            float sunScore = 2;
+			float sunScore = 2;
 			float moonScore = 2;
 			float starScore = 2;
 
@@ -141,102 +141,102 @@ namespace XRL.World.Parts {
 			int error = xpLevel - (SunScore + MoonScore + StarScore);
 			SunScore += error;
 
-            Foil = rnd.Next(10) == 0;
+			Foil = rnd.Next(10) == 0;
 
-            NonBlueprintVariance(fe, rnd);
-            BoostLowLevel(rnd);
-            BoostFoil(rnd);
+			NonBlueprintVariance(fe, rnd);
+			BoostLowLevel(rnd);
+			BoostFoil(rnd);
 
-            if (fe.IsBaetyl) {
-                SunScore = -5;
-                MoonScore = -5;
-                StarScore = -5;
-            }
+			if (fe.IsBaetyl) {
+				SunScore = -5;
+				MoonScore = -5;
+				StarScore = -5;
+			}
 
-            PointValue = SunScore + MoonScore + StarScore;
+			PointValue = SunScore + MoonScore + StarScore;
 
 			Faction = fe.Factions.FirstOrDefault();
 
 			SetColors(fe);
 			SetDescription(fe);
 			SetDisplayName(fe);
-            
-      if (Foil)
-          ParentObject.RequirePart<UD_AnimatedMaterialFoil>();
-          
-      if (fe.IsLovely)
-          ParentObject.RequirePart<Lovely>();
-      else
-          ParentObject.RemovePart<Lovely>();
+			
+	  if (Foil)
+		  ParentObject.RequirePart<UD_AnimatedMaterialFoil>();
+		  
+	  if (fe.IsLovely)
+		  ParentObject.RequirePart<Lovely>();
+	  else
+		  ParentObject.RemovePart<Lovely>();
 		}
 
-        private void NonBlueprintVariance(FactionEntity fe, Random Rnd = null) {
-            if (fe.FromBlueprint) return;
+		private void NonBlueprintVariance(FactionEntity fe, Random Rnd = null) {
+			if (fe.FromBlueprint) return;
 
-            // blueprint entities have some natural variance in their dice rolls
-            // FEs that are generated from GOs are set in stone, so we artificially add some variance
-            // adjust each stat by 2d3 - 2 => -2,-1,-1,0,0,0,1,1,2
-            // if that would reduce the stat to zero or less, just use the old stat
+			// blueprint entities have some natural variance in their dice rolls
+			// FEs that are generated from GOs are set in stone, so we artificially add some variance
+			// adjust each stat by 2d3 - 2 => -2,-1,-1,0,0,0,1,1,2
+			// if that would reduce the stat to zero or less, just use the old stat
 
-            Rnd ??= Stat.Rnd2;
+			Rnd ??= Stat.Rnd2;
 
-            var oldMoon = MoonScore;
-            MoonScore += Rnd.Next(3) + Rnd.Next(3) - 2;
-            if (MoonScore < 1) MoonScore = oldMoon;
+			var oldMoon = MoonScore;
+			MoonScore += Rnd.Next(3) + Rnd.Next(3) - 2;
+			if (MoonScore < 1) MoonScore = oldMoon;
 
-            var oldStar = StarScore;
-            StarScore += Rnd.Next(3) + Rnd.Next(3) - 2;
-            if (StarScore < 1) StarScore = oldStar;
+			var oldStar = StarScore;
+			StarScore += Rnd.Next(3) + Rnd.Next(3) - 2;
+			if (StarScore < 1) StarScore = oldStar;
 
-            var oldSun = SunScore;
-            SunScore += Rnd.Next(3) + Rnd.Next(3) - 2;
-            if (SunScore < 1) SunScore = oldSun;
-        }
+			var oldSun = SunScore;
+			SunScore += Rnd.Next(3) + Rnd.Next(3) - 2;
+			if (SunScore < 1) SunScore = oldSun;
+		}
 
-        // make low level cards more interesting by boosting a couple stats
-        // some get 3 or 4 points in a single stat
-        // some get 4 then 2, and some get 3 then 2
-        private void BoostLowLevel(Random Rnd = null) {
-            const int LowLevel = 8;
-            if (MoonScore + StarScore + SunScore >= LowLevel) return;
+		// make low level cards more interesting by boosting a couple stats
+		// some get 3 or 4 points in a single stat
+		// some get 4 then 2, and some get 3 then 2
+		private void BoostLowLevel(Random Rnd = null) {
+			const int LowLevel = 8;
+			if (MoonScore + StarScore + SunScore >= LowLevel) return;
 
-            Rnd ??= Stat.Rnd2;
+			Rnd ??= Stat.Rnd2;
 
-            var times = Rnd.Next(2) + Rnd.Next(2); // 2d2-2 = distribution 0,1,1,2
-            var boost = Rnd.Next(2) + 3; // start with 3 or 4 point boost
-            for (int i = 0; i < times; i++) {
-                var stat = Rnd.Next(3);
-                BoostStat(stat, boost);
+			var times = Rnd.Next(2) + Rnd.Next(2); // 2d2-2 = distribution 0,1,1,2
+			var boost = Rnd.Next(2) + 3; // start with 3 or 4 point boost
+			for (int i = 0; i < times; i++) {
+				var stat = Rnd.Next(3);
+				BoostStat(stat, boost);
 
-                // second loop will always boost a stat by 2
-                boost = 2;
-            }
-        }
+				// second loop will always boost a stat by 2
+				boost = 2;
+			}
+		}
 
-        private void BoostFoil(Random Rnd = null) {
-            if (!Foil) return;
+		private void BoostFoil(Random Rnd = null) {
+			if (!Foil) return;
 
-            Rnd ??= Stat.Rnd2;
+			Rnd ??= Stat.Rnd2;
 
-            var first = Rnd.Next(3);
-            var second = Rnd.Next(2);
-            if (second == first) {
-                second = 2; // 0 => 2/1, 1 => 0/2, 2 => 0/1
-            }
+			var first = Rnd.Next(3);
+			var second = Rnd.Next(2);
+			if (second == first) {
+				second = 2; // 0 => 2/1, 1 => 0/2, 2 => 0/1
+			}
 
-            BoostStat(first, 2);
-            BoostStat(second, 1);
-        }
+			BoostStat(first, 2);
+			BoostStat(second, 1);
+		}
 
-        private void BoostStat(int stat, int boost) {
-            switch (stat) {
-                case 0: MoonScore += boost; break;
-                case 1: SunScore += boost; break;
-                case 2: StarScore += boost; break;
-            }
-        }
+		private void BoostStat(int stat, int boost) {
+			switch (stat) {
+				case 0: MoonScore += boost; break;
+				case 1: SunScore += boost; break;
+				case 2: StarScore += boost; break;
+			}
+		}
 
-        private void SetColors(FactionEntity fe) {
+		private void SetColors(FactionEntity fe) {
 			ParentObject.Render.ColorString = fe.FgColor;
 			ParentObject.Render.DetailColor = fe.DetailColor;
 		}

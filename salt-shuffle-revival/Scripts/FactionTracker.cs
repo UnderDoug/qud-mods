@@ -16,9 +16,9 @@ namespace Plaidman.SaltShuffleRevival {
 		}
 	}
 
-    [Serializable]
+	[Serializable]
 	class FactionTracker : IPlayerSystem {
-        [NonSerialized]
+		[NonSerialized]
 		private static FactionTracker Instance;
 		[NonSerialized]
 		const string UninstallCommand = "Plaidman_SaltShuffleRevival_Command_Uninstall";
@@ -49,24 +49,24 @@ namespace Plaidman.SaltShuffleRevival {
 				FactionMemberCache.Add(faction.Name, factionMembers);
 			}
 
-            // check the zone object cache for entities to add
-            if (The.ZoneManager?.CachedObjects is Dictionary<string, GameObject> cachedObjects) {
-                foreach (var cachedObject in cachedObjects.Values) {
-                    if (GetCreatureFactions(cachedObject).Count > 0) {
-                        var entity = new FactionEntity(cachedObject, false);
+			// check the zone object cache for entities to add
+			if (The.ZoneManager?.CachedObjects is Dictionary<string, GameObject> cachedObjects) {
+				foreach (var cachedObject in cachedObjects.Values) {
+					if (GetCreatureFactions(cachedObject).Count > 0) {
+						var entity = new FactionEntity(cachedObject, false);
 
-                        foreach (var faction in entity.Factions) {
-                            if (!FactionMemberCache.TryGetValue(faction, out List<FactionEntity> factionMembers)) {;
-                                FactionMemberCache.Add(faction, factionMembers = new());
-                            }
+						foreach (var faction in entity.Factions) {
+							if (!FactionMemberCache.TryGetValue(faction, out List<FactionEntity> factionMembers)) {;
+								FactionMemberCache.Add(faction, factionMembers = new());
+							}
 
-                            if (factionMembers.Any(member => member.Equals(entity))) continue;
+							if (factionMembers.Any(member => member.Equals(entity))) continue;
 
-                            factionMembers.Add(entity);
-                        }
-                    }
-                }
-            }
+							factionMembers.Add(entity);
+						}
+					}
+				}
+			}
 		}
 
 		public override void Register(XRLGame game, IEventRegistrar registrar) {
@@ -171,16 +171,16 @@ namespace Plaidman.SaltShuffleRevival {
 			return closest;
 		}
 
-        public static string GetRandomFaction(Random Rnd = null) {
-            Rnd ??= Stat.Rnd2;
-            return GetNonEmptyFactions().GetRandomElement(Rnd);
-        }
+		public static string GetRandomFaction(Random Rnd = null) {
+			Rnd ??= Stat.Rnd2;
+			return GetNonEmptyFactions().GetRandomElement(Rnd);
+		}
 
-        public static FactionEntity GetRandomCreature(string faction = null, Random Rnd = null) {
-            Rnd ??= Stat.Rnd2;
-            faction ??= GetRandomFaction(Rnd);
-            return GetFactionMembers(faction).GetRandomElement(Rnd).GetCreature();
-        }
+		public static FactionEntity GetRandomCreature(string faction = null, Random Rnd = null) {
+			Rnd ??= Stat.Rnd2;
+			faction ??= GetRandomFaction(Rnd);
+			return GetFactionMembers(faction).GetRandomElement(Rnd).GetCreature();
+		}
 
 		public static FactionEntity RequireCreature(string blueprint) {
 			if (GameObjectFactory.Factory.GetBlueprintIfExists(blueprint) is not GameObjectBlueprint model)
@@ -189,22 +189,22 @@ namespace Plaidman.SaltShuffleRevival {
 			var instance = GetInstance();
 
 			// sample disposes itself at the end of scope
-            using var sampleEntity = FactionEntity.GetCreature(model.Name);
+			using var sampleEntity = FactionEntity.GetCreature(model.Name);
 
-            foreach (var feList in instance.FactionMemberCache.Values) {
+			foreach (var feList in instance.FactionMemberCache.Values) {
 				if (feList.FirstOrDefault(fe => fe.Equals(sampleEntity)) is FactionEntity existingEntity) {
-                    return existingEntity.GetCreature();
-                }
+					return existingEntity.GetCreature();
+				}
 			}
 
-            var entity = sampleEntity.Clone();
-            foreach (var faction in entity.Factions)
-            {
-                var factionMembers = GetFactionMembers(faction);
-                if (factionMembers.Any(member => member.Equals(entity))) continue;
-                factionMembers.Add(entity);
-            }
-            return entity.GetCreature();
+			var entity = sampleEntity.Clone();
+			foreach (var faction in entity.Factions)
+			{
+				var factionMembers = GetFactionMembers(faction);
+				if (factionMembers.Any(member => member.Equals(entity))) continue;
+				factionMembers.Add(entity);
+			}
+			return entity.GetCreature();
 		}
 
 		public static List<string> GetCreatureFactions(GameObject go) {
