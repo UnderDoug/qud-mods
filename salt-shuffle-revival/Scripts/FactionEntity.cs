@@ -72,11 +72,21 @@ namespace Plaidman.SaltShuffleRevival {
 			IsBaetyl = go.Brain?.GetPrimaryFaction() == "Baetyl";
 
             a = go.a;
-			DetailColor = go.Render.DetailColor;
+			string fgColor = null;
+            try {
+				var entityRender = go.RenderForUI(AsIfKnown: true);
+				DetailColor = entityRender.GetDetailColorChar().ToString();
+                // Gets the foreground colour whether it's been defined as the tile color or as a color string
+                fgColor = entityRender.GetForegroundColorChar().ToString();
+            } catch {
+				var entityRender = go.Render;
+                DetailColor = entityRender.getDetailColor().ToString();
 			// Gets the foreground colour whether it's been defined as the tile color or as a color string
-			string fgColor = go.Render.GetTileForegroundColor();
+                fgColor = entityRender.GetForegroundColorChar().ToString();
+            }
 			// stops cards from being only a single color (in order to improve the card's visuals)
-			if (fgColor == DetailColor) {
+            if (fgColor == DetailColor)
+            {
 				// switches the fg shade; if it was dark, make it bright, if it was bright make it dark
 				fgColor = fgColor.ToLower() == fgColor ? fgColor.ToUpper() : fgColor.ToLower();
 				// don't use dark black

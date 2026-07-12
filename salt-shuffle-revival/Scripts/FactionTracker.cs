@@ -180,7 +180,9 @@ namespace Plaidman.SaltShuffleRevival {
 			// Exclude specific end-game blueprints
 			if (Blueprint.Name == "Ehalcodon"
 				|| Blueprint.Name == "Spoken Ionic"
-				|| Blueprint.Name == "Sheyd") {
+				|| Blueprint.Name == "Sheyd"
+				|| Blueprint.Name == "Fool of the Gyre"
+				|| Blueprint.Name == "Mover Baetyl") {
 				return false;
 			}
 

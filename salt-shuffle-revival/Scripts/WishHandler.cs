@@ -65,7 +65,7 @@ namespace XRL.Wish {
 						.Append(faction).Append(" (").Append(factionMembers?.Count ?? 0).Append("):");
 					foreach (var factionMember in factionMembers) {
 						sB.AppendLine()
-							.Append("\xff\xff\xff:\xff").Append(factionMember.Name);
+							.Append("\xff\xff\xff:\xff{{|").Append(factionMember.Name).Append("}}");
 						if (factionMember.FromBlueprint || (factionMember.Name.StartsWith("[") && factionMember.Name.EndsWith("]"))) {
 							sB.Append(" (").Append(factionMember.Blueprint).Append(")");
 						}
