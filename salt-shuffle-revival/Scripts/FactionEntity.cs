@@ -79,7 +79,7 @@ namespace Plaidman.SaltShuffleRevival {
 			}
 
             // if the game object was created explicitly to create this FE, it should be tidied up
-            if (FromBlueprint) go.Obliterate();
+            if (FromBlueprint) go.Release();
         }
 
 		protected FactionEntity(FactionEntity fe) {
@@ -111,9 +111,9 @@ namespace Plaidman.SaltShuffleRevival {
 
 		public FactionEntity GetCreature() {
 			if (Blueprint != null) {
-				// create a new FE based on a GO so we can take advantage of BP dice rolls for stats
-				return new(GameObjectFactory.Factory.CreateSampleObject(Blueprint), true);
-			}
+                // create a new FE based on a GO so we can take advantage of BP dice rolls for stats
+                return new(GameObject.Create(Blueprint, Context: $"Plaidman.SaltShuffleRevival.{nameof(FactionEntity)}"), true);
+            }
 
 			return this;
 		}
