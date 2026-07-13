@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Plaidman.SaltShuffleRevival;
+using XRL.Collections;
 using XRL.Rules;
 using XRL.UI;
 using XRL.World;
@@ -16,7 +18,7 @@ namespace XRL.Wish {
 			switch (split[0].ToLower()) {
 				case "booster":
 					if (split.Length == 1 || split[1].Length == 0 || (split.Length == 2 && split[1].EqualsNoCase("cosmetic"))) {
-						ParseFaction(FactionTracker.GetRandomFaction(split.Length < 2 ? The.Player.GetSeededRandom($"Plaidman.SaltShuffleRevival.Wish") : Stat.Rnd2));
+						ParseFaction(FactionTracker.GetRandomFaction(split.Length < 2 ? The.Player.GetSeededRandom($"Plaidman.SaltShuffleRevival.Wish::{more}") : Stat.Rnd2));
 					}
 					else ParseFaction(split[1]);
 					break;
@@ -27,6 +29,51 @@ namespace XRL.Wish {
 
 				case "box":
 					The.Player.TakeObject(GameObject.Create("Plaidman_SSR_BoosterBox", Context: "Wish"));
+					break;
+
+				case "card":
+					string faction = null;
+					string blueprint = null;
+					bool random = false;
+					Random rnd = null;
+					if (split.Length == 1 || split[1].Length == 0 || (split.Length == 2 && split[1].EqualsNoCase("cosmetic"))) {
+						random = true;
+						rnd = split.Length < 2 ? The.Player.GetSeededRandom($"Plaidman.SaltShuffleRevival.Wish::{more}") : Stat.Rnd2;
+                    } else if (split.Length >= 2) {
+						if (split.Length == 2) {
+							if (WishSearcher.SearchForBlueprint(split[1]) is WishResult wishResult) {
+								blueprint = wishResult.Result;
+							} else {
+								faction = FactionTracker.ClosestFaction(split[1]);
+							}
+						} else {
+                            using var remainder = ScopeDisposedList<string>.GetFromPoolFilledWith(split);
+                            remainder.RemoveAt(0); // 0
+                            remainder.RemoveAt(0); // 1
+							string remainingParams = remainder.Aggregate((string)null, (a, n) => a + (!a.IsNullOrEmpty() ? " " : null) + n);
+                            if (split[1].EqualsNoCase("blueprint") || split[1].EqualsNoCase("bp")) {
+								
+								if (WishSearcher.SearchForBlueprint(remainingParams) is WishResult wishResult) {
+									blueprint = wishResult.Result;
+								} else {
+									random = true;
+								}
+							} else if (split[1].EqualsNoCase("faction") || split[1].EqualsNoCase("f")) {
+								faction = FactionTracker.ClosestFaction(remainingParams);
+                            } else {
+								random = true;
+							}
+						}
+					} else random = true;
+					rnd ??= The.Player.GetSeededRandom($"Plaidman.SaltShuffleRevival.Wish::{more}");
+                    GameObject card = null;
+					if (!random) {
+						if (!blueprint.IsNullOrEmpty()) card = SSR_Card.CreateCard(GameObject.Create(blueprint));
+						else if (faction != null) card = SSR_Card.CreateCard(faction, rnd);
+					}
+					card ??= SSR_Card.CreateCard(rnd);
+
+                    The.Player.TakeObject(card);
 					break;
 
 				case "debug":

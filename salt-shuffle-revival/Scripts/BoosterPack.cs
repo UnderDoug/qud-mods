@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using ConsoleLib.Console;
 using Plaidman.SaltShuffleRevival;
 using XRL.UI;
 
@@ -8,6 +9,7 @@ namespace XRL.World.Parts {
 	public class SSR_BoosterPack : IScribedPart, IModEventHandler<SSR_UninstallEvent> {
 		public string Faction;
 		public bool Starter = false;
+		public double FoilChance = 10.0;
 
 		public override void Read(GameObject basis, SerializationReader reader) {
 			if (reader.ModVersions["Plaidman_SaltShuffleRevival"] == new Version("1.0.0")) {
@@ -15,7 +17,6 @@ namespace XRL.World.Parts {
 				Starter = reader.ReadBoolean();
 				return;
 			}
-
 			base.Read(basis, reader);
 		}
 
@@ -69,7 +70,7 @@ namespace XRL.World.Parts {
 			} else {
                 // this allows for object blueprints that inherit from Plaidman_SSR_Booster to specify a faction
                 if (Faction.IsNullOrEmpty()) {
-					Faction = FactionTracker.GetRandomFaction();
+					Faction = FactionTracker.GetRandomFaction(ParentObject.GetSeededRandom("Plaidman.SaltShuffleRevival.Booster")) ?? "Dogs";
 				} else {
 					Faction = FactionTracker.ClosestFaction(Faction);
 				}
@@ -84,24 +85,31 @@ namespace XRL.World.Parts {
 			;
 
         public void OverrideFaction(string faction) {
-			Faction = faction;
-			var entry = Factions.Get(faction);
-            ParentObject.DisplayName = $"pack of Salt Shuffle cards: {entry.DisplayName}";
-			if (entry.Emblem is FactionEmblem emblem) {
-				string existingColor = ParentObject.Render.TileColor.Replace("&", "");
-				if (existingColor.IsNullOrEmpty()) {
-					existingColor = ParentObject.Render.ColorString.Replace("&", "");
-                }
+			var entry = Factions.GetIfExists(faction) ?? Factions.GetIfExists("Dogs");
+			Faction = entry?.Name;
+			if (entry != null) {
+				ParentObject.DisplayName = $"pack of Salt Shuffle cards: {entry?.DisplayName}";
+				if (entry.Emblem is FactionEmblem emblem) {
+					var renderable = ParentObject.RenderForUI(AsIfKnown: true);
+					string existingColor = renderable.GetForegroundColorChar().ToString();
 
-                string detailColor = emblem.DetailColor.ToString();
-                if (detailColor == existingColor) {
-					detailColor = emblem.ColorString.Replace("&", "");
-				}
+					string detailColor = emblem.DetailColor.ToString();
+					if (detailColor == existingColor) {
+						if (!emblem.getTileColor().IsNullOrEmpty()) {
+							detailColor = emblem.getTileColor().Replace("&", "");
+						} else {
+							detailColor = ColorUtility.StripBackgroundFormatting(emblem.ColorString).Replace("&", "");
+						}
+						if (detailColor == existingColor) {
+							detailColor = detailColor.ToLower() == detailColor ? detailColor.ToUpper() : detailColor.ToLower();
+						}
+					}
 
-				if (!detailColor.IsNullOrEmpty()) {
-					ParentObject.Render.DetailColor = detailColor;
+					if (!detailColor.IsNullOrEmpty()) {
+						ParentObject.Render.DetailColor = detailColor;
+					}
 				}
-            }
+			}
 		}
 
 		public override bool HandleEvent(GetInventoryActionsEvent e) {
@@ -137,8 +145,8 @@ namespace XRL.World.Parts {
 			var qty = Starter ? 12 : 5;
 			for (int i = 0; i < qty; i++) {
 				var card = Starter
-					? SSR_Card.CreateCard(rnd)
-					: SSR_Card.CreateCard(Faction, rnd);
+					? SSR_Card.CreateCard(rnd, FoilChance)
+					: SSR_Card.CreateCard(Faction, rnd, FoilChance);
 
 				if (i > 0)
 					firstCard = card;

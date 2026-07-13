@@ -84,6 +84,12 @@
     <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
   </object>
 
+  <object Name="Plaidman_SSR_Card Warden Une Foil" Inherits="Plaidman_SSR_Card Warden Une">
+    <part Name="Render" DisplayName="[Salt Shuffle foil card: Blueprint, Une]" />
+    <part Name="SSR_Card" Foil="true" />
+    <tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+  </object>
+
   <object Name="Plaidman_SSR_Card Snapjaw Scavenger" Inherits="Plaidman_SSR_Card">
     <part Name="Render" DisplayName="[Salt Shuffle card: Blueprint, Snapjaw Scavenger]" />
     <part Name="SSR_Card" Blueprint="Snapjaw Scavenger" />
@@ -97,6 +103,26 @@
 	<object Name="Plaidman_SSR_Booster YdFreehold" Inherits="Plaidman_SSR_Booster">
 		<part Name="Render" DisplayName="[Salt Shuffle booster: YdFreehold]" />
 		<part Name="SSR_BoosterPack" Faction="YdFreehold" />
+		<tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+	</object>
+	<object Name="Plaidman_SSR_Booster YdFreehold Rare" Inherits="Plaidman_SSR_Booster YdFreehold">
+		<part Name="Render" DisplayName="[Salt Shuffle rare booster: YdFreehold]" />
+		<part Name="SSR_BoosterPack" FoilChance="33.34" />
+		<tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+	</object>
+	<object Name="Plaidman_SSR_Booster YdFreehold Rarer" Inherits="Plaidman_SSR_Booster YdFreehold Rare">
+		<part Name="Render" DisplayName="[Salt Shuffle rarer booster: YdFreehold]" />
+		<part Name="SSR_BoosterPack" FoilChance="50" />
+		<tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+	</object>
+	<object Name="Plaidman_SSR_Booster YdFreehold Rarest" Inherits="Plaidman_SSR_Booster YdFreehold Rarer">
+		<part Name="Render" DisplayName="[Salt Shuffle rarest booster: YdFreehold]" />
+		<part Name="SSR_BoosterPack" FoilChance="75" />
+		<tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
+	</object>
+	<object Name="Plaidman_SSR_Booster YdFreehold All Foil" Inherits="Plaidman_SSR_Booster YdFreehold Rarest">
+		<part Name="Render" DisplayName="[Salt Shuffle All Foil booster: YdFreehold]" />
+		<part Name="SSR_BoosterPack" FoilChance="100" />
 		<tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
 	</object>
 

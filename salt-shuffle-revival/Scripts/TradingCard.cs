@@ -14,12 +14,18 @@ namespace XRL.World.Parts {
 		public const double TARGET_PLAYER_COMMERCE = 0.75; // the intended "base" value players should be able to sell cards for
 		public const double MERCHANT_COMMERCE_MULTI = 0.67; // modifies how much a merchant over/undervalues cards
 
-		public int SunScore = 0;
+        public const string BEFORE_SET_CREATURE_EVENT_ID = "Plaidman_SaltShuffleRevival_BeforeSetCreature";
+        public const string SET_CREATURE_EVENT_ID = "Plaidman_SaltShuffleRevival_SetCreature";
+
+        private static readonly Event BeforeSetCreatureEvent = new(BEFORE_SET_CREATURE_EVENT_ID);
+        private static readonly Event SetCreatureEvent = new(SET_CREATURE_EVENT_ID);
+
+        public int SunScore = 0;
 		public int MoonScore = 0;
 		public int StarScore = 0;
 		public int PointValue = 0;
 		public string ShortDisplayName = "";
-		public bool Foil = false;
+		public bool? Foil;
 		public bool Random;
 		public string Faction;
 		public string Blueprint;
@@ -85,7 +91,11 @@ namespace XRL.World.Parts {
 		}
 
 		public static bool IsSelling(GameObject Trader, GameObject Object)
-			=> Trader == Object.Holder
+			=> Trader != null && Trader == Object?.Holder
+			;
+
+		public static bool IsBuying(GameObject Trader, GameObject Object)
+			=> Trader != null && !IsSelling(Trader, Object?.Holder)
 			;
 
 		public static void UnderValueMulti(ref double Value, double? Multi = null)
@@ -155,6 +165,10 @@ namespace XRL.World.Parts {
 			=> PropertyIsTrue(nameof(FactionTracker.IsHeroic))
 			;
 
+		public bool IsFoil()
+			=> Foil.GetValueOrDefault()
+			;
+
 		public override bool HandleEvent(GetIntrinsicValueEvent e) {
 			if (e.Object == ParentObject) {
 				if (ParentObject.Holder?.IsPlayer() is true) {
@@ -167,7 +181,7 @@ namespace XRL.World.Parts {
 				if (!IsHeroic()) {
 					UnderValueMulti(ref e.Value, 0.67);
 				}
-				if (Foil) OverValueMulti(ref e.Value, 4.0);
+				if (IsFoil()) OverValueMulti(ref e.Value, 4.0);
 			}
 			return base.HandleEvent(e);
 		}
@@ -197,8 +211,12 @@ namespace XRL.World.Parts {
 							UnderValueMulti(ref e.Value);
 							Properties.Remove("LastTraderDepictsSelf");
 						} else {
+							double vanityMulti = 7.0; // 7.5 results in a max-ego player being able to repeatedly trade back and forth for profit
+                            if (IsBuying(interestedParty, ParentObject)) {
+								vanityMulti = 4.0; // not quite as high if player selling
+							}
 							// makes traders highly overvalue cards of themselves (out of vanity)
-							OverValueMulti(ref e.Value, 7.0); // 7.5 results in a max-ego player being able to repeatedly trade back and forth for profit.
+							OverValueMulti(ref e.Value, vanityMulti); 
 							Properties["LastTraderDepictsSelf"] = "Yes";
 						}
 					}
@@ -206,7 +224,7 @@ namespace XRL.World.Parts {
 
 					Properties["LastTraderFeeling"] = $"{traderFeeling}";
 
-					if (!IsSelling(interestedParty, ParentObject)) {
+					if (IsBuying(interestedParty, ParentObject)) {
 						// trader wont pay for cards from factions (or combinations thereof) they hate
 						if (traderFeeling < -1) {
 							UnderValueMulti(ref e.Value, 0.0);
@@ -231,31 +249,43 @@ namespace XRL.World.Parts {
 		}
 
 		public override bool HandleEvent(ObjectCreatedEvent e) {
+			_ = ParentObject.BaseID;
+			string seed = GetContext(nameof(SSR_Card));
+			string context = e.Context?.Replace("Plaidman.SaltShuffleRevival.", "");
+            if (!context.IsNullOrEmpty()) {
+				seed = $"{seed}::{context}";
+			} else {
+				context = null;
+			}
+			var rnd = ParentObject.GetSeededRandom(seed);
+			FactionEntity entity = null;
 			if (Random) {
-				// if Random is set true in the object blueprint, find a random creature, set it
-				SetCreature(FactionTracker.GetRandomCreature());
+				// if Random is set true in the object blueprint, find a random creature
+				entity = FactionTracker.GetRandomCreature(Rnd: rnd);
 			} else if (!Blueprint.IsNullOrEmpty()) {
-				// if Blueprint is defined in the object blueprint, find the FE for it, set it; fall back to random creature
+				// if Blueprint is defined in the object blueprint, find the FE for it; fall back to random creature
 				if (FactionTracker.RequireCreature(Blueprint) is FactionEntity blueprintFE) {
-					SetCreature(blueprintFE);
+                    entity = blueprintFE;
 				} else {
-					SetCreature(FactionTracker.GetRandomCreature());
+                    entity = FactionTracker.GetRandomCreature(Rnd: rnd);
 				}
 			} else if (!Faction.IsNullOrEmpty()) {
-				// if Faction is defined in the object blueprint, find a random FE for it, set it; fall back to random creature
-				if (FactionTracker.GetRandomCreature(Faction) is FactionEntity factionFE) {
-					SetCreature(factionFE);
+				Faction = FactionTracker.ClosestFaction(Faction);
+				// if Faction is defined in the object blueprint, find a random FE for it; fall back to random creature
+				if (FactionTracker.GetRandomCreature(Faction, Rnd: rnd) is FactionEntity factionFE) {
+                    entity = factionFE;
 				} else {
-					SetCreature(FactionTracker.GetRandomCreature());
+                    entity = FactionTracker.GetRandomCreature(Rnd: rnd);
 				}
 			}
-			// if none of these are the case, then simply exist until SetCreature is called elsewhere
-			return base.HandleEvent(e);
+			if (entity != null) SetCreature(entity, Rnd: rnd, Context: context ?? nameof(ObjectCreatedEvent));
+            // if none of these are the case, then simply exist until SetCreature is called elsewhere
+            return base.HandleEvent(e);
 		}
 
 		public override bool HandleEvent(GetDebugInternalsEvent e) {
 			e.AddEntry(this, nameof(ParentObject), ParentObject.Blueprint);
-			e.AddEntry(this, nameof(Foil), Foil);
+			e.AddEntry(this, nameof(Foil), Foil?.ToString() ?? "undefined");
 			e.AddEntry(this, nameof(Random), Random);
 			e.AddEntry(this, nameof(Faction), Faction ?? "undefined");
 			e.AddEntry(this, nameof(Blueprint), Blueprint ?? "undefined");
@@ -264,7 +294,11 @@ namespace XRL.World.Parts {
 					if (name.StartsWith("LastTrader")) continue;
 					propertyPairs.Add($"{name}: {value}");
 				}
-				e.AddEntry(this, nameof(Properties), propertyPairs.Aggregate((string)null, (a, n) => a + (!a.IsNullOrEmpty() ? "\n" : null) + n) ?? "empty");
+				string propertiesString = propertyPairs.Aggregate(
+						seed: (string)null,
+						func: (a, n) => a + (!a.IsNullOrEmpty() ? "\n" : null) + n)
+					?? "empty";
+                e.AddEntry(this, nameof(Properties), propertiesString);
 			}
 			if (Properties.TryGetValue("LastTrader", out string lastTrader)) {
 				using (var lastTraderInfo = ScopeDisposedList<string>.GetFromPool()) {
@@ -272,7 +306,11 @@ namespace XRL.World.Parts {
 					foreach (var lastTraderProp in Properties.Keys.Where(k => k.StartsWith("LastTrader") && k != "LastTrader")) {
 						lastTraderInfo.Add($"{lastTraderProp["LastTrader".Length..]}: {Properties[lastTraderProp]}");
 					}
-					e.AddEntry(this, "Last Trader", lastTraderInfo.Aggregate((string)null, (a, n) => a + (!a.IsNullOrEmpty() ? "\n" : null) + n));
+					string lastTraderString = lastTraderInfo.Aggregate(
+							seed: (string)null,
+							func: (a, n) => a + (!a.IsNullOrEmpty() ? "\n" : null) + n)
+						?? "empty";
+                    e.AddEntry(this, "Last Trader", lastTraderString);
 				}
 			}
 			return base.HandleEvent(e);
@@ -292,37 +330,88 @@ namespace XRL.World.Parts {
 			=> false
 			;
 
+		public static string GetContext(string Context = null) {
+			string seed = $"Plaidman.SaltShuffleRevival";
+			if (!Context.IsNullOrEmpty()) {
+				seed = $"{seed}.{Context}";
+			}
+			return seed;
+		}
+
+		public static string GetCreateCardSeed(string Context = null) {
+			string seed = GetContext(nameof(CreateCard));
+			if (!Context.IsNullOrEmpty()) {
+				seed = $"{seed}.{Context}";
+			}
+			return seed;
+		}
+
 		// opening a starter deck
-		public static GameObject CreateCard(Random Rnd = null) {
-			var card = GameObject.Create("Plaidman_SSR_Card", Context: "Plaidman.SaltShuffleRevival.StarterDeck");
+		public static GameObject CreateCard(Random Rnd = null, double FoilChance = 10.0) {
+			string context = "StarterDeck";
+			var card = GameObject.Create("Plaidman_SSR_Card", Context: GetContext(context));
 			var part = card.GetPart<SSR_Card>();
-			Rnd ??= card.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(CreateCard)}");
-			part.SetCreature(FactionTracker.GetRandomCreature(Rnd: Rnd));
+			Rnd ??= card.GetSeededRandom(GetCreateCardSeed(context));
+			part.SetCreature(
+				fe: FactionTracker.GetRandomCreature(Rnd: Rnd),
+                Rnd: Rnd,
+                FoilChance: FoilChance,
+				Context: context);
 			return card;
 		}
 
 		// opening a booster and generate a deck for an opponent
-		public static GameObject CreateCard(string faction, Random Rnd = null) {
-			var card = GameObject.Create("Plaidman_SSR_Card", Context: $"Plaidman.SaltShuffleRevival.Booster::{faction}");
+		public static GameObject CreateCard(string faction, Random Rnd = null, double FoilChance = 10.0) {
+			string context = $"Booster::{faction}";
+            var card = GameObject.Create("Plaidman_SSR_Card", Context: GetContext(context));
 			var part = card.GetPart<SSR_Card>();
-			Rnd ??= card.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(CreateCard)}.{faction}");
-			part.SetCreature(FactionTracker.GetRandomCreature(faction, Rnd: Rnd));
+			Rnd ??= card.GetSeededRandom(GetCreateCardSeed(context));
+			part.SetCreature(
+				fe: FactionTracker.GetRandomCreature(faction, Rnd: Rnd),
+                Rnd: Rnd,
+                FoilChance: FoilChance,
+				Context: context);
 			return card;
 		}
 
 		// when the opponent is bested in card combat
-		public static GameObject CreateCard(GameObject go) {
-			var card = GameObject.Create("Plaidman_SSR_Card", Context: $"Plaidman.SaltShuffleRevival.Victory::{go.BaseID}");
+		public static GameObject CreateCard(GameObject go, double FoilChance = 10.0) {
+			string context = $"Victory::{go.Blueprint}:{go.BaseID}";
+            var card = GameObject.Create("Plaidman_SSR_Card", Context: GetContext(context));
 			var part = card.GetPart<SSR_Card>();
-			part.SetCreature(FactionEntity.GetFromGameObject(go, false));
+			part.SetCreature(
+				fe: FactionEntity.GetFromGameObject(go, false),
+				FoilChance: FoilChance,
+				Context: context);
 			return card;
 		}
 
-		private void SetCreature(FactionEntity fe) {
-			var rnd = ParentObject.GetSeededRandom($"Plaidman.SaltShuffleRevival.{nameof(SSR_Card)}.{nameof(SetCreature)}");
-			fe ??= FactionTracker.GetRandomCreature(Rnd: rnd);
+		private bool SetCreature(FactionEntity fe, Random Rnd = null, double FoilChance = 10.0, string Context = null) {
+			string seed = GetContext($"{nameof(SSR_Card)}.{nameof(SetCreature)}");
+			if (!Context.IsNullOrEmpty()) seed = $"{seed}.{Context}";
+			Rnd ??= ParentObject.GetSeededRandom(seed);
+			fe ??= FactionTracker.GetRandomCreature(Rnd: Rnd);
 
-			float sunScore = 2;
+            if (ParentObject.HasRegisteredEvent(BeforeSetCreatureEvent.ID)) {
+                BeforeSetCreatureEvent.Clear();
+                BeforeSetCreatureEvent
+                    .AddParameter("Card", ParentObject)
+                    .AddParameter(nameof(FactionEntity), fe)
+                    .AddParameter(nameof(FoilChance), FoilChance)
+                    .AddParameter(nameof(Context), Context);
+
+				try {
+                    if (!ParentObject.FireEvent(BeforeSetCreatureEvent))
+						return false;
+
+                    fe = BeforeSetCreatureEvent.GetParameter<FactionEntity>(nameof(FactionEntity));
+                    FoilChance = BeforeSetCreatureEvent.GetParameter<double>(nameof(FoilChance));
+                } finally { 
+					BeforeSetCreatureEvent.Clear();
+				}
+            }
+
+            float sunScore = 2;
 			float moonScore = 2;
 			float starScore = 2;
 
@@ -340,18 +429,20 @@ namespace XRL.World.Parts {
 			starScore -= minScore * 2 / 3;
 			float total = sunScore + moonScore + starScore;
 
-			SunScore = (int) Math.Round(sunScore * xpLevel / total);
-			MoonScore = (int) Math.Round(moonScore * xpLevel / total);
-			StarScore = (int) Math.Round(starScore * xpLevel / total);
+			SunScore = (int)Math.Round(sunScore * xpLevel / total);
+			MoonScore = (int)Math.Round(moonScore * xpLevel / total);
+			StarScore = (int)Math.Round(starScore * xpLevel / total);
 
 			int error = xpLevel - (SunScore + MoonScore + StarScore);
 			SunScore += error;
 
-			Foil = rnd.Next(10) == 0;
+			if (!Foil.HasValue) {
+				Foil = Rnd.Next(10000) < (int)(FoilChance * 100.0);
+			}
 
-			NonBlueprintVariance(fe, rnd);
-			BoostLowLevel(rnd);
-			BoostFoil(rnd);
+			NonBlueprintVariance(fe, Rnd);
+			BoostLowLevel(Rnd);
+			BoostFoil(Rnd);
 
 			if (fe.IsBaetyl) {
 				SunScore = -5;
@@ -361,7 +452,7 @@ namespace XRL.World.Parts {
 
 			PointValue = SunScore + MoonScore + StarScore;
 
-			Faction = fe.Factions.FirstOrDefault(s => !s.IsNullOrEmpty());
+			Faction = fe.Factions.FirstOrDefault(s => !s.IsNullOrEmpty()) ?? "Dogs";
 			Blueprint = fe.GetProperty(nameof(GameObject.Blueprint));
 
 			SetColors(fe);
@@ -374,6 +465,22 @@ namespace XRL.World.Parts {
 				ParentObject.RequirePart<Lovely>();
 			else
 				ParentObject.RemovePart<Lovely>();
+
+			if (IsFoil())
+				ParentObject.RequirePart<UD_AnimatedMaterialFoil>();
+
+            if (ParentObject.HasRegisteredEvent(SetCreatureEvent.ID)) {
+                SetCreatureEvent.Clear();
+                SetCreatureEvent
+                    .AddParameter("Card", ParentObject)
+                    .AddParameter(nameof(FactionEntity), fe)
+                    .AddParameter(nameof(FoilChance), FoilChance)
+                    .AddParameter(nameof(Context), Context);
+
+				ParentObject.FireEvent(SetCreatureEvent);
+                SetCreatureEvent.Clear();
+            }
+			return true;
 		}
 
 		private void NonBlueprintVariance(FactionEntity fe, Random Rnd = null) {
@@ -420,7 +527,7 @@ namespace XRL.World.Parts {
 		}
 
 		private void BoostFoil(Random Rnd = null) {
-			if (!Foil) return;
+			if (!IsFoil()) return;
 
 			Rnd ??= Stat.Rnd2;
 
@@ -450,7 +557,7 @@ namespace XRL.World.Parts {
 		private void SetDescription(FactionEntity fe) {
 			var builder = new StringBuilder();
 
-			if (Foil) {
+			if (IsFoil()) {
 				builder.Append("A {{Y|reflective}} trading card with an animated illustration of =a==name= plus various cryptic statistics. The card {{Y|shimmers}} when viewed at different angles.\n\n");
 			} else {
 				builder.Append("A trading card with a stylized illustration of =a==name= plus various cryptic statistics.\n\n");
@@ -480,7 +587,7 @@ namespace XRL.World.Parts {
 			var builder = new StringBuilder("=name==foil= {{W|=sun=}}/{{C|=moon=}}/{{M|=star=}}");
 			builder.StartReplace()
 				.AddReplacer("name", "{{|" + fe.Name + "}}")
-                .AddReplacer("foil", Foil ? " ({{Y|F}})" : null)
+                .AddReplacer("foil", IsFoil() ? " ({{Y|F}})" : null)
                 .AddReplacer("sun", SunScore.ToString())
 				.AddReplacer("moon", MoonScore.ToString())
 				.AddReplacer("star", StarScore.ToString())

@@ -283,13 +283,8 @@ namespace Plaidman.SaltShuffleRevival {
 		}
 
 		public static bool FactionHasMembers(string faction) {
-			var instance = GetInstance();
-
-			if (instance.FactionMemberCache.TryGetValue(faction, out List<FactionEntity> factionMembers)) {
-				return factionMembers.Count > 0;
-			}
-			
-			return false;
+			return GetInstance().FactionMemberCache.TryGetValue(faction, out List<FactionEntity> factionMembers)
+				&& factionMembers.Count > 0;
 		}
 
 		private static List<FactionEntity> GetFactionMembers(string faction) {
