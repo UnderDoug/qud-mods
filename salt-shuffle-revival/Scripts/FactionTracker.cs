@@ -133,7 +133,7 @@ namespace Plaidman.SaltShuffleRevival {
 				if (The.ZoneManager?.CachedObjects is Dictionary<string, GameObject> cachedObjects) {
 					var cachedObjectFactionEntities = cachedObjects.Values
 						.Where(go => GetCreatureFactions(go).Count > 0 && IsEligibleForFactionEntity(go.GetBlueprint()))
-						.Select(go => new FactionEntity(go, false));
+						.Select(go => FactionEntity.GetFromGameObject(go, false));
 
 					foreach (var entity in cachedObjectFactionEntities) {
 						Event.ResetPool();
@@ -147,7 +147,7 @@ namespace Plaidman.SaltShuffleRevival {
 								FactionMemberCache.Add(faction, factionMembers);
                             }
                             // remove this game object's blueprint entry and replace it with their actual entry, if they're cached
-                            if (entity.TryGetProperty(nameof(IsHeroic), out string isHeroic) && isHeroic.EqualsNoCase("true")) {
+                            if (entity.PropertyIsTrue(nameof(IsHeroic))) {
 								factionMembers.RemoveAll(delegate (FactionEntity member) {
 									if (!member.Equals(entity)) {
 										var blueprint = member.Blueprint ?? member.Properties?.GetValue(nameof(FactionEntity.Blueprint));
@@ -309,7 +309,7 @@ namespace Plaidman.SaltShuffleRevival {
 				return;
 			}
 
-			var entity = new FactionEntity(go, false);
+			var entity = FactionEntity.GetFromGameObject(go, false);
 			foreach (var faction in entity.Factions) {
 				var factionMembers = GetFactionMembers(faction);
 				// remove this game object's blueprint entry and replace it with their actual entry, once they're encountered
@@ -357,19 +357,22 @@ namespace Plaidman.SaltShuffleRevival {
 			return closest;
 		}
 
-		public static string GetRandomFaction() {
-			return GetNonEmptyFactions().GetRandomElementCosmetic() ?? "Dogs";
+		public static string GetRandomFaction(Random Rnd = null) {
+			Rnd ??= Stat.Rnd2;
+			return GetNonEmptyFactions().GetRandomElement(Rnd);
 		}
 
 		// changes here were after it became apparent that the FactionMemberCache was overfilling with legendary creatures;
 		// this way, they're weighted towards generic creatures instead
-		public static FactionEntity GetRandomCreature(string faction = null) {
+		public static FactionEntity GetRandomCreature(string faction = null, Random Rnd = null) {
+            Rnd ??= Stat.Rnd2;
+
 			// Joppa is made invisible later in the world-gen process if you do a non-Joppa start.
 			// This stops Irudad/Nima/Yrame from popping up in those games.
 			if (faction == null) {
 				var instance = GetInstance();
 				do {
-					faction = GetRandomFaction() ?? "Dogs";
+					faction = GetRandomFaction(Rnd) ?? "Dogs";
 					if (Factions.Get(faction)?.Visible is false) {
 						instance.FactionMemberCache.Remove(faction);
 						faction = null;
@@ -391,7 +394,7 @@ namespace Plaidman.SaltShuffleRevival {
 			}
 
 			// draws a random weighted creature
-            return cardBag.GetRandomElement(Stat.Rnd2).GetCreature();
+            return cardBag.GetRandomElement(Rnd).GetCreature();
 		}
 
 		public static FactionEntity RequireCreature(string blueprint) {
@@ -403,10 +406,10 @@ namespace Plaidman.SaltShuffleRevival {
 			// sample, disposes itself at the end of scope
             using var sampleEntity = FactionEntity.GetCreature(model.Name, FactionEntity.GetWeight(model));
 
-            foreach (var feList in instance.FactionMemberCache.Values) {
+			foreach (var feList in instance.FactionMemberCache.Values) {
 				if (feList.FirstOrDefault(fe => fe.Equals(sampleEntity)) is FactionEntity existingEntity) {
-                    return existingEntity.GetCreature();
-                }
+					return existingEntity.GetCreature();
+				}
 			}
 
             var entity = sampleEntity.Clone();

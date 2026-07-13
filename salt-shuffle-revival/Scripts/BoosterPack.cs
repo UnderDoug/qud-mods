@@ -63,6 +63,7 @@ namespace XRL.World.Parts {
 		}
 
 		public override bool HandleEvent(ObjectCreatedEvent e) {
+			_ = ParentObject.BaseID; // forces the ID to be generated at the point of object creation.
 			if (Starter) {
 				Faction = null;
 			} else {
@@ -77,10 +78,10 @@ namespace XRL.World.Parts {
 			return base.HandleEvent(e);
         }
 
-        // forces no stacking
-        public override bool SameAs(IPart p)
-            => false
-            ;
+		// forces no stacking
+		public override bool SameAs(IPart p)
+			=> false
+			;
 
         public void OverrideFaction(string faction) {
 			Faction = faction;
@@ -108,7 +109,7 @@ namespace XRL.World.Parts {
 				Name: "Unwrap",
 				Key: 'o',
 				FireOnActor: false,
-				Display: "{{W|o}}pen",
+				Display: "open",
 				Command: "InvCommandUnwrap",
 				Default: 2
 			);
@@ -130,12 +131,14 @@ namespace XRL.World.Parts {
 			var additionalCards = Event.NewGameObjectList();
 			var allCards = Event.NewGameObjectList();
 
+			var rnd = ParentObject.GetSeededRandom($"Plaidman.SaltShuffleRevival.InvCommandUnwrap");
+
 			GameObject firstCard = null;
 			var qty = Starter ? 12 : 5;
 			for (int i = 0; i < qty; i++) {
 				var card = Starter
-					? SSR_Card.CreateCard()
-					: SSR_Card.CreateCard(Faction);
+					? SSR_Card.CreateCard(rnd)
+					: SSR_Card.CreateCard(Faction, rnd);
 
 				if (i > 0)
 					firstCard = card;

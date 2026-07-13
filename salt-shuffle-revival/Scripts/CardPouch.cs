@@ -24,20 +24,22 @@ namespace XRL.World.Parts {
 		}
 
 		public override bool HandleEvent(BeforeDeathRemovalEvent e) {
-			var pouch = GameObjectFactory.Factory.CreateObject("Plaidman_SSR_CardPouch");
-			var count = Stat.Rnd2.Next(4) + 2; // between 2 and 5 cards
-			
+			string context = $"Plaidman.SaltShuffleRevival.{nameof(BeforeDeathRemovalEvent)}::{e.Dying.BaseID}";
+			var pouch = GameObject.Create("Plaidman_SSR_CardPouch", Context: context);
+			var rnd = e.Dying.GetSeededRandom(context);
+			var count = rnd.Next(4) + 2; // between 2 and 5 cards
+
 			for (var i = 0; i < count; i++) {
-				pouch.TakeObject(Cards.RemoveRandomElement(Stat.Rnd2));
+				pouch.TakeObject(Cards.RemoveRandomElement(rnd));
 			}
 
 			ParentObject.CurrentCell.AddObject(pouch);
 			return base.HandleEvent(e);
-        }
+		}
 
-        // forces no stacking
-        public override bool SameAs(IPart p)
-            => false
-            ;
-    }
+		// forces no stacking
+		public override bool SameAs(IPart p)
+			=> false
+			;
+	}
 }
