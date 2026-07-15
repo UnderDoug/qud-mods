@@ -267,11 +267,11 @@ namespace Plaidman.SaltShuffleRevival {
 			}
 
 			if (margin == 2) {
-				if (foeCard.PointValue > yourCard.PointValue) {
+				if (foeCard.Level > yourCard.Level) {
 					// banished from play
 					enemyField.RemoveAt(foeCardIndex);
 
-					points = 1 + foeCard.PointValue - yourCard.PointValue;
+					points = 1 + foeCard.Level - yourCard.Level;
 					verb = "{{O|topples}}";
 				} else {
 					// returned to deck
@@ -288,7 +288,7 @@ namespace Plaidman.SaltShuffleRevival {
 			builder.StartReplace()
 				.AddReplacer("verb", verb)
 				.AddReplacer("foePoss", NamePoss(foe, true))
-				.AddReplacer("foeCard", foeCard.ShortDisplayName)
+				.AddReplacer("foeCard", foeCard.ParentObject.GetDisplayName(Short: true))
 				.AddReplacer("points", points.ToString("+0;-#"))
 				.Execute();
 			return builder;
@@ -369,8 +369,8 @@ namespace Plaidman.SaltShuffleRevival {
 			}
 
 			if (margin == 2) {
-				if (foe.PointValue <= card.PointValue) return (1, 1);
-				else return (1 + foe.PointValue - card.PointValue, 1);
+				if (foe.Level <= card.Level) return (1, 1);
+				else return (1 + foe.Level - card.Level, 1);
 			}
 
 			return (0, 0);
@@ -388,9 +388,9 @@ namespace Plaidman.SaltShuffleRevival {
 
 		private static int CardCrushPenalty(SSR_Card card, SSR_Card foe) {
 			return new[]{
-				card.SunScore - foe.SunScore,
-				card.MoonScore - foe.MoonScore,
-				card.StarScore - foe.StarScore,
+				card.GetSunScore() - foe.GetSunScore(),
+				card.GetMoonScore() - foe.GetMoonScore(),
+				card.GetStarScore() - foe.GetStarScore(),
 			}.Min() * -1;
 		}
 

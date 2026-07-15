@@ -20,10 +20,15 @@
 		<part Name="Description" Short="A Salt Shuffle card. Fingerprint smudges make it hard to read." />
 		<part Name="Physics" Weight="0" Category="Trading Cards" />
 		<part Name="Commerce" Value="5" />
+    <stat Name="Hitpoints" Value="10" />
 		<tag Name="ExcludeFromDynamicEncounters" Value="*noinherit" />
 		<tag Name="BaseObject" Value="*noinherit" />
 		<tag Name="NoSparkingQuest" />
+		<tag Name="NoRepair" />
+    <tag Name="Breakable" Value="*delete"/>
+    <part Name="NoBreak" />
 		<part Name="NoRust" />
+		<part Name="NoDamageExcept" Except="Plaidman_SSR_CardCondition" />
     <intproperty Name="NeverStack" Value="1" />
   </object>
   <object Name="Plaidman_SSR_CardPouch" Inherits="Chest">

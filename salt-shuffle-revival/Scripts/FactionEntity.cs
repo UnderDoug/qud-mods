@@ -153,17 +153,17 @@ namespace Plaidman.SaltShuffleRevival {
                 fe.Desc = ColorUtility.StripFormatting(go.GetPart<Description>()._Short);
             }
 
-            fe.Properties[nameof(go.Blueprint)] = go.Blueprint;
+            fe.SetProperty(nameof(go.Blueprint), go.Blueprint);
 
-            fe.Properties[nameof(Factions)] = fe.Factions.Aggregate((string)null, (a, n) => a + (!a.IsNullOrEmpty() ? "," : null) + n);
+            fe.SetProperty(nameof(Factions), fe.Factions.Aggregate((string)null, (a, n) => a + (!a.IsNullOrEmpty() ? "," : null) + n) ?? "Dogs");
 
             if (FactionTracker.IsHeroic(go)) {
-                fe.Properties[nameof(FactionTracker.IsHeroic)] = "true";
-                fe.Properties["HeroicIcon"] = go.GetTile();
+                fe.SetProperty(nameof(FactionTracker.IsHeroic), "true");
             }
+            fe.SetProperty("HeroicIcon", go.GetTile());
 
             if (go.HasPart<Lovely>()) {
-                fe.Properties[nameof(Lovely)] = "true";
+                fe.SetProperty(nameof(Lovely), "true");
             }
 
             fe.Weight = GetWeight(go);
@@ -187,6 +187,20 @@ namespace Plaidman.SaltShuffleRevival {
                 if (fe.FromBlueprint) go.Release();
             }
         }
+
+		public string SetProperty(string Name, string Value, bool RemoveIfNull = false) {
+			Properties[Name] = Value;
+			if (RemoveIfNull && Value == null) {
+                RemoveProperty(Name);
+				return null;
+			}
+			return Properties[Name];
+		}
+
+		public bool RemoveProperty(string Name)
+			=> Name != null
+			&& Properties.Remove(Name)
+			;
 
 		public bool HasProperty(string Name)
 			=> !Name.IsNullOrEmpty()

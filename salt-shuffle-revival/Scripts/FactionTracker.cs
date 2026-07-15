@@ -10,11 +10,13 @@ using XRL.UI;
 using XRL.World;
 using XRL.World.Parts;
 
-namespace Plaidman.SaltShuffleRevival {
+namespace Plaidman.SaltShuffleRevival
+{
     [HasGameBasedStaticCache]
     [HasCallAfterGameLoaded]
     [Serializable]
-	public class FactionTracker : IPlayerSystem {
+	public class FactionTracker : IPlayerSystem
+	{
         [GameBasedStaticCache(CreateInstance = false)]
         private static FactionTracker Instance;
 		public const string UninstallCommand = "Plaidman_SaltShuffleRevival_Command_Uninstall";
@@ -23,63 +25,76 @@ namespace Plaidman.SaltShuffleRevival {
 
         public Dictionary<string, List<FactionEntity>> FactionMemberCache;
 
-		public override bool WantFieldReflection => false;
-		public override void Write(SerializationWriter writer) {
-			writer.WriteNamedFields(this, GetType());
-			writer.WriteOptimized(GameID);
+		public override void Write(SerializationWriter Writer)
+		{
+			Writer.WriteOptimized(GameID);
 		}
 
-		public override void Read(SerializationReader reader) {
-			reader.ReadNamedFields(this, GetType());
-			GameID = reader.ReadOptimizedString();
+		public override void Read(SerializationReader Reader)
+		{
+			GameID = Reader.ReadOptimizedString();
 		}
 
-        private static FactionTracker InitializeSystem() => new() { GameID = The.Game?.GameID };
+        private static FactionTracker InitializeSystem()
+			=> new()
+			{ 
+				GameID = The.Game?.GameID
+			}
+			;
 
         [CallAfterGameLoaded]
         [GameBasedCacheInit]
-        public static void FactionTrackerSystemInit() {
-            if (Instance == null) {
+        public static void FactionTrackerSystemInit()
+		{
+            if (Instance == null)
+			{
                 Instance = The.Game?.RequireSystem(InitializeSystem);
-                if (Instance != null && Instance.GameID == null) {
+                if (Instance != null && Instance.GameID == null)
                     Instance.GameID = The.Game.GameID;
-				}
-            } else if (Instance.GameID != null && Instance.GameID != The.Game?.GameID) {
+            }
+			else
+			if (Instance.GameID != null && Instance.GameID != The.Game?.GameID)
+			{
                 Instance = null;
                 FactionTrackerSystemInit();
                 return;
-            } else if (The.Game?.GetSystem<FactionTracker>() == null) {
+            }
+			else
+			if (The.Game?.GetSystem<FactionTracker>() == null)
                 The.Game?.AddSystem(Instance);
-			}
 
-            if (Instance != null) {
+            if (Instance != null)
                 Loading.LoadTask($"Printing Cards", Instance.TrackFactions);
-			} else if (The.Game != null) {
+			else
+			if (The.Game != null) 
                 ModManager.GetMod().Error($"Failed to load {nameof(FactionTracker)}.");
-			}
         }
 
 		public static string GetID()
 			=> GetInstance()?.GameID
 			;
 
-        private static bool CheckFactionEntity(FactionEntity entity, string baseShortDesc) {
+        private static bool CheckFactionEntity(FactionEntity Entity, string BaseShortDesc)
+		{
 			// skip entities that haven't been assigned a non-default a display name ("[Object]", "[Creature]")
-			if (entity.Name.StartsWith("[")
-				&& entity.Name.EndsWith("]")) {
-				entity.Dispose();
+			if (Entity.Name.StartsWith("[")
+				&& Entity.Name.EndsWith("]"))
+			{
+				Entity.Dispose();
 				return false;
 			}
 
 			// skip entities that haven't been assigned a non-default description
-			if (entity.Desc?.StartsWith(baseShortDesc) is true) {
-				entity.Dispose();
+			if (Entity.Desc?.StartsWith(BaseShortDesc) is true)
+			{
+				Entity.Dispose();
 				return false;
 			}
 			return true;
 		}
 
-        public void TrackFactions() {
+        public void TrackFactions()
+		{
             GameID ??= The.Game.GameID;
 
 			if (!FactionMemberCache.IsNullOrEmpty())
@@ -92,8 +107,10 @@ namespace Plaidman.SaltShuffleRevival {
             var factionList = Factions.GetList().Where(f => f.Visible && !f.GetMembers(Dynamic: false).IsNullOrEmpty());
 
 			Event.PinCurrentPool(); // there's gonna be a lot of events thrown around here
-			try {
-				foreach (var faction in factionList) {
+			try
+			{
+				foreach (var faction in factionList)
+				{
 					Event.ResetPool();
 					var factionMembers = faction.GetMembers(Dynamic: false)
 						.Where(IsEligibleForFactionEntity)
@@ -103,53 +120,68 @@ namespace Plaidman.SaltShuffleRevival {
 					// removes any faction entities that would result in creatures with missing display names or descriptions.
 					// there are Pariah creatures and BaseSightless that both show up.
 					// the former requires entering a cell to generate, the latter is lacking the BaseObject tag (probably a bug/oversight).
-					factionMembers.RemoveAll(delegate (FactionEntity fe) {
-						if (fe.GetCreature() is not FactionEntity entity) {
+					factionMembers.RemoveAll(delegate (FactionEntity fe)
+					{
+						if (fe.GetCreature() is not FactionEntity entity)
+						{
                             fe.Dispose();
 							return true;
 						}
-						try {
-							if (!CheckFactionEntity(entity, baseShortDesc)) {
+						try
+						{
+							if (!CheckFactionEntity(entity, baseShortDesc))
+							{
 								fe.Dispose();
 								return true;
 							}
 							return false;
-						} finally {
+						}
+						finally
+						{
 							entity.Dispose();
                         }
 					});
 
-                    if (!FactionMemberCache.TryGetValue(faction.Name, out List<FactionEntity> existingFactionMembers)) {
+                    if (!FactionMemberCache.TryGetValue(faction.Name, out List<FactionEntity> existingFactionMembers))
 						FactionMemberCache.Add(faction.Name, factionMembers);
-                    } else {
-						foreach (var factionMember in factionMembers) {
+                    else
+					{
+						foreach (var factionMember in factionMembers)
 							existingFactionMembers.AddIfNot(factionMember, existingFactionMembers.Contains);
-                        }
+
                         FactionMemberCache[faction.Name] = existingFactionMembers;
                     }
 				}
 
 				// check the zone object cache for entities to add
-				if (The.ZoneManager?.CachedObjects is Dictionary<string, GameObject> cachedObjects) {
+				if (The.ZoneManager?.CachedObjects is Dictionary<string, GameObject> cachedObjects)
+				{
 					var cachedObjectFactionEntities = cachedObjects.Values
 						.Where(go => GetCreatureFactions(go).Count > 0 && IsEligibleForFactionEntity(go.GetBlueprint()))
 						.Select(go => FactionEntity.GetFromGameObject(go, false));
 
-					foreach (var entity in cachedObjectFactionEntities) {
+					foreach (var entity in cachedObjectFactionEntities)
+					{
 						Event.ResetPool();
 
 						if (!CheckFactionEntity(entity, baseShortDesc))
 							continue;
 
-                        foreach (var faction in entity.Factions) {
-							if (!FactionMemberCache.TryGetValue(faction, out List<FactionEntity> factionMembers)) {
+                        foreach (var faction in entity.Factions)
+						{
+							if (!FactionMemberCache.TryGetValue(faction, out List<FactionEntity> factionMembers))
+							{
 								factionMembers = new();
 								FactionMemberCache.Add(faction, factionMembers);
                             }
+
                             // remove this game object's blueprint entry and replace it with their actual entry, if they're cached
-                            if (entity.PropertyIsTrue(nameof(IsHeroic))) {
-								factionMembers.RemoveAll(delegate (FactionEntity member) {
-									if (!member.Equals(entity)) {
+                            if (entity.PropertyIsTrue(nameof(IsHeroic)))
+							{
+								factionMembers.RemoveAll(delegate (FactionEntity member)
+								{
+									if (!member.Equals(entity))
+									{
 										var blueprint = member.Blueprint ?? member.Properties?.GetValue(nameof(FactionEntity.Blueprint));
 										var otherBlueprint = entity?.Blueprint ?? entity.Properties?.GetValue(nameof(FactionEntity.Blueprint));
 
@@ -159,38 +191,48 @@ namespace Plaidman.SaltShuffleRevival {
                                     return  false;
 								});
                             }
-							if (factionMembers.Any(member => member.Equals(entity))) continue;
+							if (factionMembers.Any(member => member.Equals(entity)))
+								continue;
+
 							factionMembers.Add(entity);
 						}
 					}
 				}
-			} finally { 
+			}
+			finally
+			{ 
 				Event.ResetToPin();
 			}
         }
 
-        public static FactionTracker GetInstance() {
-			if (Instance == null) FactionTrackerSystemInit();
+        public static FactionTracker GetInstance()
+		{
+			if (Instance == null)
+				FactionTrackerSystemInit();
+
             return Instance;
 		}
 
-		public FactionTracker() { FactionMemberCache = new(); }
+		public FactionTracker()
+			: base()
+		{ 
+			FactionMemberCache = new();
+		}
 
-		public static bool IsEligibleForFactionEntity(GameObjectBlueprint Blueprint) {
+		public static bool IsEligibleForFactionEntity(GameObjectBlueprint Blueprint)
+		{
 			// Exclude specific end-game blueprints
 			if (Blueprint.Name == "Ehalcodon"
 				|| Blueprint.Name == "Spoken Ionic"
 				|| Blueprint.Name == "Sheyd"
 				|| Blueprint.Name == "Fool of the Gyre"
-				|| Blueprint.Name == "Mover Baetyl") {
+				|| Blueprint.Name == "Mover Baetyl")
 				return false;
-			}
 
 			// Exclude any prologue blueprints 
 			if (Blueprint.Name.Contains("Chiliad")
-				|| Blueprint.HasTag("SemanticChiliad")) {
+				|| Blueprint.HasTag("SemanticChiliad"))
 				return false;
-			}
 
 			// Exclude BaseSightless which is not tagged as a base object (catch anything else like this)
             if (Blueprint.Name.StartsWith("Base"))
@@ -198,9 +240,8 @@ namespace Plaidman.SaltShuffleRevival {
 
 			// Exclude special creatures
 			if (Blueprint.Name.EndsWith(" Cherub") // cherubs need to be spawned with their Spawner blueprint
-				|| Blueprint.HasTag("Golem")) { // golems, for obvious reasons
+				|| Blueprint.HasTag("Golem")) // golems, for obvious reasons
 				return false;
-			}
 
             // Exclude uninitialized Sheba Hagadias, unfortunate, but her creature isn't deterministically chosen
             if (Blueprint.HasTag("IsLibrarian"))
@@ -209,7 +250,8 @@ namespace Plaidman.SaltShuffleRevival {
 			return true;
         }
 
-		public static bool IsHeroic(GameObjectBlueprint Blueprint) {
+		public static bool IsHeroic(GameObjectBlueprint Blueprint)
+		{
             // this is the metric the game uses
 			if (Blueprint.HasPart(nameof(GivesRep)))
                 return true;
@@ -222,7 +264,8 @@ namespace Plaidman.SaltShuffleRevival {
 			return !EncountersAPI.IsLegendaryEligible(Blueprint);
         }
 
-		public static bool IsHeroic(string Blueprint) {
+		public static bool IsHeroic(string Blueprint)
+		{
 			if (Blueprint.IsNullOrEmpty())
 				return false;
 
@@ -232,7 +275,8 @@ namespace Plaidman.SaltShuffleRevival {
 			return IsHeroic(model);
 		}
 
-		public static bool IsHeroic(GameObject Object) {
+		public static bool IsHeroic(GameObject Object)
+		{
             if (Object.HasPart(nameof(GivesRep)))
                 return true;
 
@@ -245,33 +289,39 @@ namespace Plaidman.SaltShuffleRevival {
 			return IsHeroic(Object.GetBlueprint());
         }
 
-        public override void Register(XRLGame game, IEventRegistrar registrar) {
-			registrar.Register(AfterZoneBuiltEvent.ID);
-			base.Register(game, registrar);
+        public override void Register(XRLGame Game, IEventRegistrar Registrar)
+		{
+			Registrar.Register(AfterZoneBuiltEvent.ID);
+			base.Register(Game, Registrar);
 		}
 
-		public override void RegisterPlayer(GameObject player, IEventRegistrar registrar) {
-			registrar.Register(CommandEvent.ID);
-			base.RegisterPlayer(player, registrar);
+		public override void RegisterPlayer(GameObject Player, IEventRegistrar Registrar)
+		{
+			Registrar.Register(CommandEvent.ID);
+			base.RegisterPlayer(Player, Registrar);
 		}
 
-		public override bool HandleEvent(AfterZoneBuiltEvent e) {
-			var creatures = e.Zone.GetObjects(go => GetCreatureFactions(go).Count > 0);
-			foreach (var creature in creatures) {
+		public override bool HandleEvent(AfterZoneBuiltEvent E)
+		{
+			var creatures = E.Zone.GetObjects(go => GetCreatureFactions(go).Count > 0);
+			foreach (var creature in creatures)
 				AddFactionMember(creature);
-			}
-			return base.HandleEvent(e);
+
+			return base.HandleEvent(E);
 		}
 
-		public override bool HandleEvent(CommandEvent e) {
-			if (e.Command == UninstallCommand) {
+		public override bool HandleEvent(CommandEvent E)
+		{
+			if (E.Command == UninstallCommand)
 				UninstallParts();
-			}
-			return base.HandleEvent(e);
+
+			return base.HandleEvent(E);
 		}
 
-		public void UninstallParts() {
-			if (!Confirm.ShowNoYes("Are you sure you want to uninstall {{W|Salt Shuffle Revival}}? All cards and booster packs will be removed.")) {
+		public void UninstallParts()
+		{
+			if (!Confirm.ShowNoYes("Are you sure you want to uninstall {{W|Salt Shuffle Revival}}? All cards and booster packs will be removed."))
+			{
 				XRL.Messages.MessageQueue.AddPlayerMessage("{{W|Salt Shuffle Revival}} uninstall was cancelled.");
 				return;
 			}
@@ -282,17 +332,17 @@ namespace Plaidman.SaltShuffleRevival {
 			Popup.Show("Finished removing {{W|Salt Shuffle Revival}}. Please save and quit, then you can remove this mod.");
 		}
 
-		public static bool FactionHasMembers(string faction) {
-			return GetInstance().FactionMemberCache.TryGetValue(faction, out List<FactionEntity> factionMembers)
-				&& factionMembers.Count > 0;
-		}
+		public static bool FactionHasMembers(string faction)
+			=> GetInstance().FactionMemberCache.TryGetValue(faction, out List<FactionEntity> factionMembers)
+			&& factionMembers.Count > 0
+			;
 
-		private static List<FactionEntity> GetFactionMembers(string faction) {
+		private static List<FactionEntity> GetFactionMembers(string faction)
+		{
 			var instance = GetInstance();
 
-			if (instance.FactionMemberCache.TryGetValue(faction, out List<FactionEntity> factionMembers)) {
+			if (instance.FactionMemberCache.TryGetValue(faction, out List<FactionEntity> factionMembers))
 				return factionMembers;
-			}
 
 			factionMembers = new();
 			instance.FactionMemberCache.Add(faction, factionMembers);
@@ -300,50 +350,60 @@ namespace Plaidman.SaltShuffleRevival {
 		}
 
 		private static void AddFactionMember(GameObject go) {
-			if (go.GetBlueprint().IsBaseBlueprint()) {
+			if (go.GetBlueprint().IsBaseBlueprint())
 				return;
-			}
 
 			var entity = FactionEntity.GetFromGameObject(go, false);
-			foreach (var faction in entity.Factions) {
+			foreach (var faction in entity.Factions)
+			{
 				var factionMembers = GetFactionMembers(faction);
 				// remove this game object's blueprint entry and replace it with their actual entry, once they're encountered
-				if (IsHeroic(go)) factionMembers.RemoveAll(delegate (FactionEntity member) {
-                    if (!member.Equals(entity))
+				if (IsHeroic(go))
+                {
+                    factionMembers.RemoveAll(delegate (FactionEntity member)
                     {
-                        var blueprint = member.Blueprint ?? member.Properties?.GetValue(nameof(FactionEntity.Blueprint));
-                        var otherBlueprint = entity?.Blueprint ?? entity.Properties?.GetValue(nameof(FactionEntity.Blueprint));
+                        if (!member.Equals(entity))
+                        {
+                            var blueprint = member.Blueprint ?? member.Properties?.GetValue(nameof(FactionEntity.Blueprint));
+                            var otherBlueprint = entity?.Blueprint ?? entity.Properties?.GetValue(nameof(FactionEntity.Blueprint));
 
-                        if (blueprint != null && blueprint == otherBlueprint)
-                            return member.Blueprint != null;
-                    }
-                    return false;
-                });
-				if (factionMembers.Any(member => member.Equals(entity))) continue;
+                            if (blueprint != null && blueprint == otherBlueprint)
+                                return member.Blueprint != null;
+                        }
+                        return false;
+                    });
+                }
+
+				if (factionMembers.Any(member => member.Equals(entity)))
+					continue;
+
 				factionMembers.Add(entity);
 			}
 		}
 
-		private static IEnumerable<string> GetNonEmptyFactions() {
-			return GetInstance().FactionMemberCache
+		private static IEnumerable<string> GetNonEmptyFactions()
+			=> GetInstance().FactionMemberCache
 				.Where(kvp => kvp.Value.Count > 0)
-				.Select(kvp => kvp.Key);
-		}
+				.Select(kvp => kvp.Key)
+			;
 
-		public static string ClosestFaction(string faction) {
+		public static string ClosestFaction(string faction)
+		{
 			var keys = GetNonEmptyFactions();
 			var factionToLower = faction.ToLower();
 			var closest = "";
 			var min = int.MaxValue;
 
-			foreach (var key in keys) {
+			foreach (var key in keys)
+			{
 				var keyToLower = key.ToLower();
-				if (keyToLower.StartsWith("villagers of ")) {
+				if (keyToLower.StartsWith("villagers of "))
 					keyToLower = keyToLower[13..];
-				}
 
 				var dist = Grammar.LevenshteinDistance(factionToLower, keyToLower, false);
-				if (dist >= min) continue;
+
+				if (dist >= min)
+					continue;
 
 				closest = key;
 				min = dist;
@@ -352,47 +412,50 @@ namespace Plaidman.SaltShuffleRevival {
 			return closest;
 		}
 
-		public static string GetRandomFaction(Random Rnd = null) {
-			Rnd ??= Stat.Rnd2;
-			return GetNonEmptyFactions().GetRandomElement(Rnd);
-		}
+		public static string GetRandomFaction(Random Rnd = null)
+			=> GetNonEmptyFactions().GetRandomElement(Rnd ?? Stat.Rnd2)
+			;
 
 		// changes here were after it became apparent that the FactionMemberCache was overfilling with legendary creatures;
 		// this way, they're weighted towards generic creatures instead
-		public static FactionEntity GetRandomCreature(string faction = null, Random Rnd = null) {
+		public static FactionEntity GetRandomCreature(string faction = null, Random Rnd = null)
+		{
             Rnd ??= Stat.Rnd2;
 
 			// Joppa is made invisible later in the world-gen process if you do a non-Joppa start.
 			// This stops Irudad/Nima/Yrame from popping up in those games.
-			if (faction == null) {
+			if (faction == null)
+			{
 				var instance = GetInstance();
-				do {
+				do
+				{
 					faction = GetRandomFaction(Rnd) ?? "Dogs";
-					if (Factions.Get(faction)?.Visible is false) {
+					if (Factions.Get(faction)?.Visible is false)
+					{
 						instance.FactionMemberCache.Remove(faction);
 						faction = null;
 					}
-                } while (faction == null);
+                }
+				while (faction == null);
 			}
 			
 			faction ??= "Dogs"; // really early history generation sometimes tries to generate a random card before everything is set up
 
             // creates a "weighted list" where "heroic" creatures are weighted lower
             var cardBag = new Dictionary<FactionEntity, int>();
-			foreach (var fe in GetFactionMembers(faction)) {
+			foreach (var fe in GetFactionMembers(faction))
 				cardBag[fe] = fe.Weight;
-            }
 
 			// really early history generation sometimes tries to generate a random card before everything is set up
-			if (cardBag.IsNullOrEmpty()) {
+			if (cardBag.IsNullOrEmpty())
 				cardBag.Add(new FactionEntity("Dog"), FactionEntity.DEFAULT_WEIGHT);
-			}
 
 			// draws a random weighted creature
             return cardBag.GetRandomElement(Rnd).GetCreature();
 		}
 
-		public static FactionEntity RequireCreature(string blueprint) {
+		public static FactionEntity RequireCreature(string blueprint)
+		{
 			if (GameObjectFactory.Factory.GetBlueprintIfExists(blueprint) is not GameObjectBlueprint model)
 				return null;
 
@@ -401,19 +464,30 @@ namespace Plaidman.SaltShuffleRevival {
 			// sample, disposes itself at the end of scope
             using var sampleEntity = FactionEntity.GetCreature(model.Name, FactionEntity.GetWeight(model));
 
-			foreach (var feList in instance.FactionMemberCache.Values) {
-				if (feList.FirstOrDefault(fe => fe.Equals(sampleEntity)) is FactionEntity existingEntity) {
+			foreach (var feList in instance.FactionMemberCache.Values)
+				if (feList.FirstOrDefault(fe => fe.Equals(sampleEntity)) is FactionEntity existingEntity)
 					return existingEntity.GetCreature();
-				}
-			}
 
             var entity = sampleEntity.Clone();
-            foreach (var faction in entity.Factions) {
+            foreach (var faction in entity.Factions)
+			{
                 var factionMembers = GetFactionMembers(faction);
-                if (factionMembers.Any(member => member.Equals(entity))) continue;
+
+                if (factionMembers.Any(member => member.Equals(entity)))
+					continue;
+
                 factionMembers.Add(entity);
             }
+
             return entity.GetCreature();
+		}
+
+		public static IEnumerable<FactionEntity> GetAllFactionEntities(Predicate<FactionEntity> Where = null)
+		{
+			foreach (var feList in (GetInstance()?.FactionMemberCache?.Values) ?? Enumerable.Empty<List<FactionEntity>>())
+				foreach (var fe in feList ?? Enumerable.Empty<FactionEntity>())
+					if (Where?.Invoke(fe) is not false)
+						yield return fe;
 		}
 
 		private static bool IsLevelAndFactionVisible(KeyValuePair<string, int> kvp, Brain.AllegianceLevel Level)
@@ -433,8 +507,10 @@ namespace Plaidman.SaltShuffleRevival {
             => IsLevelAndFactionVisible(kvp, Brain.AllegianceLevel.Associated)
             ;
 
-        public static List<string> GetCreatureFactions(GameObject go) {
-			if (go.Brain == null) return new();
+        public static List<string> GetCreatureFactions(GameObject go)
+		{
+			if (go.Brain == null)
+				return new();
 
 			using var allFactions = ScopeDisposedList<string>.GetFromPool();
 
